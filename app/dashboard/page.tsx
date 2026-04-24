@@ -37,7 +37,7 @@ export default function DashboardPage() {
     carregarDashboard()
   }, [])
 
-  const carregarDashboard = async () => {
+  async function carregarDashboard() {
     setCarregando(true)
 
     const usuarioSalvo = localStorage.getItem('usuario')
@@ -79,7 +79,7 @@ export default function DashboardPage() {
     setCarregando(false)
   }
 
-  const sairSistema = () => {
+  function sairSistema() {
     localStorage.removeItem('usuario')
     router.push('/')
   }
@@ -104,41 +104,45 @@ export default function DashboardPage() {
   }, [ordens, filtroStatus])
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-white pb-24">
+    <div className="min-h-screen bg-[#07111f] text-white pb-28">
       <main className="max-w-md mx-auto px-4 pt-6">
         {/* TOPO */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold">Sistema OS</h1>
-            <p className="text-sm text-slate-400">Dashboard</p>
+            <h1 className="text-3xl font-bold tracking-tight">Sistema OS</h1>
+            <p className="text-base text-slate-400 mt-1">Dashboard</p>
           </div>
 
           <button
             onClick={sairSistema}
-            className="bg-[#121c2c] border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2"
+            className="bg-[#0e1828] border border-red-500/40 text-red-400 px-5 py-3 rounded-2xl text-sm font-semibold flex items-center gap-2"
           >
             ↪ Sair
           </button>
         </div>
 
         {/* CARD USUÁRIO */}
-        <div className="bg-gradient-to-br from-[#111c2e] to-[#183a91] rounded-2xl p-5 mb-4 shadow-lg border border-blue-500/20">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-br from-[#111d31] to-[#173a94] rounded-3xl p-5 mb-4 shadow-xl border border-blue-500/40">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-lg font-bold">
-                Olá, {nomeExibicao}! 👋
+              <p className="text-2xl font-bold leading-tight">
+                Olá, {nomeExibicao}!
               </p>
-              <p className="text-sm text-slate-300 mt-1">
-                {perfilExibicao}
-              </p>
+              <p className="text-base text-slate-300 mt-2">{perfilExibicao}</p>
             </div>
 
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-2xl shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-3xl shadow-lg">
               👤
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 mt-5">
+          <div className="grid grid-cols-4 gap-3 mt-6">
+            <AtalhoAzul
+              titulo="Nova OS"
+              icone="+"
+              onClick={() => router.push('/nova-os')}
+            />
+
             <Atalho
               titulo="Ordens"
               icone="📋"
@@ -147,7 +151,7 @@ export default function DashboardPage() {
 
             <Atalho
               titulo="Faturamento"
-              icone="💲"
+              icone="$"
               onClick={() => router.push('/faturamento')}
             />
 
@@ -155,12 +159,6 @@ export default function DashboardPage() {
               titulo="Configuração"
               icone="⚙️"
               onClick={() => router.push('/configuracao')}
-            />
-
-            <AtalhoAzul
-              titulo="Nova OS"
-              icone="➕"
-              onClick={() => router.push('/nova-os')}
             />
           </div>
         </div>
@@ -205,27 +203,23 @@ export default function DashboardPage() {
         </div>
 
         {/* ÚLTIMAS ORDENS */}
-        <section className="bg-[#0d1726] rounded-2xl p-4 border border-slate-700/60 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">
-              Últimas Ordens de Serviço
-            </h2>
+        <section className="bg-[#0d1726] rounded-3xl p-5 border border-slate-700/70 shadow-xl relative">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold">Últimas Ordens de Serviço</h2>
 
             <button
               onClick={() => router.push('/ordens')}
-              className="text-blue-400 text-sm"
+              className="text-blue-400 text-sm font-medium"
             >
               Ver todas →
             </button>
           </div>
 
           {carregando ? (
-            <p className="text-slate-400 text-center py-8">
-              Carregando...
-            </p>
+            <p className="text-slate-400 text-center py-10">Carregando...</p>
           ) : ordensFiltradas.length === 0 ? (
             <div className="text-center py-10">
-              <div className="w-14 h-14 mx-auto rounded-full border border-dashed border-slate-500 flex items-center justify-center text-2xl mb-3">
+              <div className="w-16 h-16 mx-auto rounded-full border border-dashed border-slate-500 flex items-center justify-center text-3xl mb-3">
                 📄
               </div>
               <p className="font-semibold text-slate-300">
@@ -265,20 +259,40 @@ export default function DashboardPage() {
 
           <button
             onClick={() => setFiltroStatus('todas')}
-            className="fixed right-5 bottom-24 w-14 h-14 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-2xl"
+            className="absolute right-5 bottom-5 w-14 h-14 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-2xl"
           >
-            🔽
+            ⟳
           </button>
         </section>
       </main>
 
-      {/* MENU INFERIOR MOBILE */}
+      {/* MENU INFERIOR */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#0b1423]/95 backdrop-blur border-t border-slate-700 px-3 py-2">
         <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
-          <MenuItem ativo titulo="Dashboard" icone="▦" onClick={() => router.push('/dashboard')} />
-          <MenuItem titulo="Ordens" icone="📋" onClick={() => router.push('/ordens')} />
-          <MenuItem titulo="Faturamento" icone="💲" onClick={() => router.push('/faturamento')} />
-          <MenuItem titulo="Config." icone="⚙️" onClick={() => router.push('/configuracao')} />
+          <MenuItem
+            ativo
+            titulo="Dashboard"
+            icone="▦"
+            onClick={() => router.push('/dashboard')}
+          />
+
+          <MenuItem
+            titulo="Ordens"
+            icone="📋"
+            onClick={() => router.push('/ordens')}
+          />
+
+          <MenuItem
+            titulo="Faturamento"
+            icone="$"
+            onClick={() => router.push('/faturamento')}
+          />
+
+          <MenuItem
+            titulo="Config."
+            icone="⚙️"
+            onClick={() => router.push('/configuracao')}
+          />
         </div>
       </nav>
     </div>
@@ -297,10 +311,12 @@ function Atalho({
   return (
     <button
       onClick={onClick}
-      className="bg-[#121c2c] border border-slate-700 rounded-xl p-3 text-center active:scale-95"
+      className="h-24 bg-[#121c2c] border border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95"
     >
-      <div className="text-lg mb-1">{icone}</div>
-      <p className="text-[11px] text-slate-300">{titulo}</p>
+      <div className="text-2xl text-blue-300">{icone}</div>
+      <p className="text-[12px] text-slate-200 text-center leading-tight">
+        {titulo}
+      </p>
     </button>
   )
 }
@@ -317,10 +333,12 @@ function AtalhoAzul({
   return (
     <button
       onClick={onClick}
-      className="bg-blue-600 border border-blue-400/30 rounded-xl p-3 text-center active:scale-95"
+      className="h-24 bg-blue-600 border border-blue-400/40 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 shadow-lg"
     >
-      <div className="text-lg mb-1">{icone}</div>
-      <p className="text-[11px] text-white">{titulo}</p>
+      <div className="text-5xl leading-none">{icone}</div>
+      <p className="text-[12px] text-white text-center leading-tight">
+        {titulo}
+      </p>
     </button>
   )
 }
@@ -341,27 +359,43 @@ function CardResumo({
   onClick: () => void
 }) {
   const cores = {
-    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-    green: 'text-green-400 bg-green-500/10 border-green-500/20',
-    red: 'text-red-400 bg-red-500/10 border-red-500/20',
+    blue: {
+      texto: 'text-blue-400',
+      fundo: 'bg-blue-500/10',
+      borda: 'border-blue-500/20',
+    },
+    purple: {
+      texto: 'text-purple-400',
+      fundo: 'bg-purple-500/10',
+      borda: 'border-purple-500/20',
+    },
+    green: {
+      texto: 'text-green-400',
+      fundo: 'bg-green-500/10',
+      borda: 'border-green-500/20',
+    },
+    red: {
+      texto: 'text-red-400',
+      fundo: 'bg-red-500/10',
+      borda: 'border-red-500/20',
+    },
   }
 
   return (
     <button
       onClick={onClick}
-      className="bg-[#0d1726] rounded-2xl p-4 border border-slate-700/60 text-left shadow-lg active:scale-[0.98]"
+      className="bg-[#0d1726] rounded-2xl p-4 border border-slate-700/70 text-left shadow-lg active:scale-[0.98]"
     >
       <div className="flex justify-between items-start">
         <div>
-          <p className={`text-sm ${cores[cor].split(' ')[0]}`}>
-            {titulo}
-          </p>
-          <p className="text-3xl font-bold mt-3">{valor}</p>
-          <p className="text-xs text-slate-500 mt-1">{subtitulo}</p>
+          <p className={`text-sm font-medium ${cores[cor].texto}`}>{titulo}</p>
+          <p className="text-4xl font-bold mt-4">{valor}</p>
+          <p className="text-xs text-slate-500 mt-2">{subtitulo}</p>
         </div>
 
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${cores[cor]}`}>
+        <div
+          className={`w-12 h-12 rounded-full flex items-center justify-center border text-xl ${cores[cor].texto} ${cores[cor].fundo} ${cores[cor].borda}`}
+        >
           {icone}
         </div>
       </div>
@@ -383,12 +417,12 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className={`py-2 rounded-xl text-xs flex flex-col items-center gap-1 ${
-        ativo ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400'
+      className={`py-2 rounded-2xl text-xs flex flex-col items-center justify-center gap-1 ${
+        ativo ? 'bg-blue-600/25 text-blue-400' : 'text-slate-400'
       }`}
     >
-      <span className="text-lg">{icone}</span>
-      {titulo}
+      <span className="text-xl">{icone}</span>
+      <span>{titulo}</span>
     </button>
   )
 }
