@@ -25,6 +25,8 @@ export default function OrdensPage() {
   }, [])
 
   async function carregarOrdens() {
+    setCarregando(true)
+
     const { data, error } = await supabase
       .from('ordens_servico')
       .select('*')
@@ -47,64 +49,50 @@ export default function OrdensPage() {
   return (
     <div className="min-h-screen bg-[#07111f] text-white pb-28">
       <main className="max-w-md mx-auto px-4 pt-5">
-        {/* TOPO */}
-        <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex items-start gap-3 mb-5">
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-12 h-12 rounded-2xl bg-[#0d1726] border border-slate-700 flex items-center justify-center text-xl"
+            className="w-11 h-11 rounded-2xl bg-[#0d1726] border border-slate-700 flex items-center justify-center text-lg shrink-0"
           >
             ←
           </button>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold leading-tight">
               Ordens de Serviço
             </h1>
-
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-400 mt-1">
               Acompanhe todas as ordens cadastradas
             </p>
           </div>
 
           <button
             onClick={() => router.push('/nova-os')}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-2xl font-semibold text-sm shadow-lg"
+            className="bg-blue-600 px-4 py-3 rounded-2xl font-semibold text-sm shadow-lg shrink-0"
           >
-            + Nova Ordem
+            + Nova
           </button>
         </div>
 
-        {/* CARD PRINCIPAL */}
         <section className="bg-[#0d1726] rounded-3xl border border-slate-700/70 shadow-xl overflow-hidden">
-          {/* HEADER */}
           <div className="p-5 border-b border-slate-700 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-blue-600/20 flex items-center justify-center text-blue-400">
                 📋
               </div>
 
-              <div>
-                <h2 className="font-bold text-lg">
-                  Ordens cadastradas
-                </h2>
-              </div>
+              <h2 className="font-bold text-lg">Ordens cadastradas</h2>
             </div>
 
-            <button className="w-10 h-10 rounded-2xl bg-[#111c2e] border border-slate-700 flex items-center justify-center">
-              🔍
+            <button
+              onClick={carregarOrdens}
+              className="w-10 h-10 rounded-2xl bg-[#111c2e] border border-slate-700 flex items-center justify-center"
+            >
+              ↻
             </button>
           </div>
 
-          {/* TABELA */}
-          <div className="px-4">
-            <div className="grid grid-cols-5 gap-2 text-xs text-slate-400 py-4 border-b border-slate-700">
-              <span>N° OS</span>
-              <span>Cliente</span>
-              <span>Solicitante</span>
-              <span>Máquina</span>
-              <span>Data entrada</span>
-            </div>
-
+          <div className="p-4 space-y-3">
             {carregando ? (
               <div className="py-10 text-center text-slate-500">
                 Carregando ordens...
@@ -118,52 +106,51 @@ export default function OrdensPage() {
                 <button
                   key={ordem.id}
                   onClick={() => router.push(`/ordens/${ordem.id}`)}
-                  className="w-full grid grid-cols-5 gap-2 text-left py-5 border-b border-slate-800 hover:bg-[#101d30] transition"
+                  className="w-full bg-[#111c2e] border border-slate-700/70 rounded-2xl p-4 text-left active:scale-[0.98] transition"
                 >
-                  <div className="flex items-center">
-                    <div className="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-400 flex items-center justify-center font-bold">
-                      {ordem.numero_os ?? ordem.id}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-blue-600/15 text-blue-400 flex items-center justify-center font-bold shrink-0">
+                        {ordem.numero_os ?? ordem.id}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white truncate">
+                          {ordem.cliente}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          OS #{ordem.numero_os ?? ordem.id}
+                        </p>
+                      </div>
                     </div>
+
+                    <span className={badgeStatus(ordem.status)}>
+                      {ordem.status === 'Aguardando material'
+                        ? 'Parado'
+                        : ordem.status}
+                    </span>
                   </div>
 
-                  <div className="text-sm leading-tight">
-                    {ordem.cliente}
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <InfoLinha titulo="Solicitante" texto={ordem.solicitante || '-'} />
+                    <InfoLinha titulo="Máquina" texto={ordem.maquina} />
+                    <InfoLinha titulo="Data de entrada" texto={formatarData(ordem.created_at)} />
                   </div>
 
-                  <div className="text-sm leading-tight">
-                    {ordem.solicitante || '-'}
-                  </div>
-
-                  <div className="text-sm leading-tight flex items-center gap-2">
-                    <span className="text-blue-400">🖥</span>
-                    {ordem.maquina}
-                  </div>
-
-                  <div className="text-sm flex items-center justify-between">
-                    {formatarData(ordem.created_at)}
-                    <span className="text-blue-400 text-lg">›</span>
+                  <div className="mt-3 text-blue-400 text-sm font-medium">
+                    Abrir relatório →
                   </div>
                 </button>
               ))
             )}
           </div>
 
-          {/* RODAPÉ */}
-          <div className="p-5 flex items-center justify-center text-sm text-slate-400">
+          <div className="p-5 border-t border-slate-700 flex items-center justify-center text-sm text-slate-400">
             📄 Total de ordens: {ordens.length}
           </div>
         </section>
       </main>
 
-      {/* BOTÃO FLUTUANTE */}
-      <button
-        className="fixed right-5 bottom-28 w-14 h-14 rounded-full bg-[#14233a] border border-blue-500/20 shadow-xl flex items-center justify-center text-xl"
-        onClick={carregarOrdens}
-      >
-        ↻
-      </button>
-
-      {/* MENU INFERIOR */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#0b1423]/95 backdrop-blur border-t border-slate-700 px-3 py-2">
         <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
           <MenuItem
@@ -196,6 +183,23 @@ export default function OrdensPage() {
   )
 }
 
+function InfoLinha({
+  titulo,
+  texto,
+}: {
+  titulo: string
+  texto: string
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2 first:border-t-0 first:pt-0">
+      <span className="text-slate-500 text-xs">{titulo}</span>
+      <span className="text-slate-200 text-sm text-right break-words">
+        {texto}
+      </span>
+    </div>
+  )
+}
+
 function MenuItem({
   titulo,
   icone,
@@ -211,13 +215,31 @@ function MenuItem({
     <button
       onClick={onClick}
       className={`py-2 rounded-2xl text-xs flex flex-col items-center justify-center gap-1 ${
-        ativo
-          ? 'bg-blue-600/20 text-blue-400'
-          : 'text-slate-400'
+        ativo ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400'
       }`}
     >
       <span className="text-xl">{icone}</span>
       <span>{titulo}</span>
     </button>
   )
+}
+
+function badgeStatus(status: string) {
+  if (status === 'Em andamento') {
+    return 'shrink-0 px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400'
+  }
+
+  if (status === 'Finalizado') {
+    return 'shrink-0 px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400'
+  }
+
+  if (status === 'Cancelado') {
+    return 'shrink-0 px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400'
+  }
+
+  if (status === 'Aguardando material') {
+    return 'shrink-0 px-3 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400'
+  }
+
+  return 'shrink-0 px-3 py-1 rounded-full text-xs bg-slate-500/20 text-slate-300'
 }
