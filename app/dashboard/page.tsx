@@ -47,22 +47,22 @@ export default function DashboardPage() {
       return
     }
 
-    const { data: dadosUsuario, error: erroUsuario } = await supabase
+    const { data: dadosUsuario } = await supabase
       .from('usuarios')
       .select('nome, perfil, usuario')
       .eq('usuario', usuarioSalvo)
       .single()
 
-    if (!erroUsuario && dadosUsuario) {
+    if (dadosUsuario) {
       setUsuarioLogado(dadosUsuario)
     }
 
-    const { data: dadosOrdens, error: erroOrdens } = await supabase
+    const { data: dadosOrdens, error } = await supabase
       .from('ordens_servico')
       .select('*')
       .order('id', { ascending: false })
 
-    if (erroOrdens) {
+    if (error) {
       alert('Erro ao carregar dashboard')
       setCarregando(false)
       return
@@ -84,23 +84,8 @@ export default function DashboardPage() {
     router.push('/')
   }
 
-  const nomeExibicao = usuarioLogado?.nome || 'Nome do Usuário'
-  const perfilExibicao = usuarioLogado?.perfil || 'Administrador'
-
-  const formatarData = (data: string) => {
-    return new Date(data).toLocaleDateString('pt-BR')
-  }
-
-  const totalResumo = emAndamento + parado + finalizados
-
-  const percentual = (valor: number) => {
-    if (totalResumo === 0) return 0
-    return Math.round((valor / totalResumo) * 100)
-  }
-
-  const percentualEmAndamento = percentual(emAndamento)
-  const percentualParado = percentual(parado)
-  const percentualFinalizados = percentual(finalizados)
+  const nomeExibicao = usuarioLogado?.nome || 'Usuário'
+  const perfilExibicao = usuarioLogado?.perfil || 'Perfil'
 
   const ordensFiltradas = useMemo(() => {
     if (filtroStatus === 'em_andamento') {
@@ -118,475 +103,312 @@ export default function DashboardPage() {
     return ordens
   }, [ordens, filtroStatus])
 
-  const tituloTabela =
-    filtroStatus === 'em_andamento'
-      ? 'Ordens em andamento'
-      : filtroStatus === 'parado'
-      ? 'Ordens paradas'
-      : filtroStatus === 'finalizado'
-      ? 'Ordens finalizadas'
-      : 'Últimas Ordens de Serviço'
-
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="md:flex">
-        {/* MENU LATERAL - SÓ PC */}
-        <aside className="hidden md:flex md:w-72 bg-white border-r min-h-screen flex-col justify-between">
+    <div className="min-h-screen bg-[#07111f] text-white pb-24">
+      <main className="max-w-md mx-auto px-4 pt-6">
+        {/* TOPO */}
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="p-6 border-b">
-              <h1 className="text-xl font-bold">Sistema OS</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Gestão de Ordens de Serviço
-              </p>
-            </div>
-
-            <nav className="p-4 space-y-2">
-              <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
-                Dashboard
-              </button>
-
-              <button
-                onClick={() => router.push('/ordens')}
-                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
-              >
-                Ordem de Serviço
-              </button>
-
-              <button
-                onClick={() => router.push('/faturamento')}
-                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
-              >
-                Faturamento
-              </button>
-
-              <button
-                onClick={() => router.push('/configuracao')}
-                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
-              >
-                Configuração
-              </button>
-            </nav>
+            <h1 className="text-2xl font-bold">Sistema OS</h1>
+            <p className="text-sm text-slate-400">Dashboard</p>
           </div>
 
-          <div className="p-4 border-t">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                {nomeExibicao.charAt(0).toUpperCase()}
-              </div>
+          <button
+            onClick={sairSistema}
+            className="bg-[#121c2c] border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2"
+          >
+            ↪ Sair
+          </button>
+        </div>
 
-              <div>
-                <p className="font-semibold text-sm">{nomeExibicao}</p>
-                <p className="text-xs text-slate-500">{perfilExibicao}</p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* CONTEÚDO */}
-        <main className="flex-1 p-3 md:p-8">
-          {/* TOPO MOBILE */}
-          <div className="md:hidden bg-white rounded-2xl shadow-sm p-4 mb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h1 className="text-xl font-bold">Sistema OS</h1>
-                <p className="text-sm text-slate-500">Dashboard</p>
-              </div>
-
-              <button
-                onClick={sairSistema}
-                className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-medium"
-              >
-                Sair
-              </button>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-lg font-bold">Olá, {nomeExibicao}! 👋</p>
-              <p className="text-sm text-slate-500 mt-1">{perfilExibicao}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              <button
-                onClick={() => router.push('/ordens')}
-                className="bg-white border rounded-xl py-3 text-sm font-medium"
-              >
-                Ordens
-              </button>
-
-              <button
-                onClick={() => router.push('/faturamento')}
-                className="bg-white border rounded-xl py-3 text-sm font-medium"
-              >
-                Faturamento
-              </button>
-
-              <button
-                onClick={() => router.push('/configuracao')}
-                className="bg-white border rounded-xl py-3 text-sm font-medium"
-              >
-                Configuração
-              </button>
-
-              <button
-                onClick={() => router.push('/nova-os')}
-                className="bg-blue-600 text-white rounded-xl py-3 text-sm font-medium"
-              >
-                Nova OS
-              </button>
-            </div>
-          </div>
-
-          {/* TOPO PC */}
-          <div className="hidden md:flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        {/* CARD USUÁRIO */}
+        <div className="bg-gradient-to-br from-[#111c2e] to-[#183a91] rounded-2xl p-5 mb-4 shadow-lg border border-blue-500/20">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold">
+              <p className="text-lg font-bold">
                 Olá, {nomeExibicao}! 👋
-              </h1>
-
-              <p className="text-slate-500 mt-2">
-                Aqui está o resumo das ordens de serviço da empresa.
+              </p>
+              <p className="text-sm text-slate-300 mt-1">
+                {perfilExibicao}
               </p>
             </div>
+
+            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-2xl shadow-lg">
+              👤
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 mt-5">
+            <Atalho
+              titulo="Ordens"
+              icone="📋"
+              onClick={() => router.push('/ordens')}
+            />
+
+            <Atalho
+              titulo="Faturamento"
+              icone="💲"
+              onClick={() => router.push('/faturamento')}
+            />
+
+            <Atalho
+              titulo="Configuração"
+              icone="⚙️"
+              onClick={() => router.push('/configuracao')}
+            />
+
+            <AtalhoAzul
+              titulo="Nova OS"
+              icone="➕"
+              onClick={() => router.push('/nova-os')}
+            />
+          </div>
+        </div>
+
+        {/* CARDS RESUMO */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <CardResumo
+            titulo="Em andamento"
+            valor={emAndamento}
+            subtitulo="Ordens ativas"
+            icone="⟳"
+            cor="blue"
+            onClick={() => setFiltroStatus('em_andamento')}
+          />
+
+          <CardResumo
+            titulo="Parado"
+            valor={parado}
+            subtitulo="Ordens"
+            icone="Ⅱ"
+            cor="purple"
+            onClick={() => setFiltroStatus('parado')}
+          />
+
+          <CardResumo
+            titulo="Finalizados"
+            valor={finalizados}
+            subtitulo="Este mês"
+            icone="✓"
+            cor="green"
+            onClick={() => setFiltroStatus('finalizado')}
+          />
+
+          <CardResumo
+            titulo="Cancelados"
+            valor={cancelados}
+            subtitulo="Este mês"
+            icone="×"
+            cor="red"
+            onClick={() => setFiltroStatus('todas')}
+          />
+        </div>
+
+        {/* ÚLTIMAS ORDENS */}
+        <section className="bg-[#0d1726] rounded-2xl p-4 border border-slate-700/60 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold">
+              Últimas Ordens de Serviço
+            </h2>
 
             <button
-              onClick={sairSistema}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-2xl font-medium"
+              onClick={() => router.push('/ordens')}
+              className="text-blue-400 text-sm"
             >
-              Sair
+              Ver todas →
             </button>
           </div>
 
-          {/* CARDS */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
-            <DashboardCard
-              titulo="Em andamento"
-              valor={emAndamento}
-              subtitulo="Ordens ativas"
-            />
-
-            <DashboardCard
-              titulo="Parado"
-              valor={parado}
-              subtitulo="Ordens"
-            />
-
-            <DashboardCard
-              titulo="Finalizados"
-              valor={finalizados}
-              subtitulo="Este mês"
-            />
-
-            <DashboardCard
-              titulo="Cancelados"
-              valor={cancelados}
-              subtitulo="Este mês"
-            />
-          </div>
-
-          {/* ÁREA PRINCIPAL */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-            {/* TABELA / LISTA */}
-            <div className="xl:col-span-2 bg-white rounded-3xl shadow-sm p-4 md:p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-                <h2 className="text-xl md:text-2xl font-bold">{tituloTabela}</h2>
-
-                <div className="flex flex-wrap gap-2">
-                  {filtroStatus !== 'todas' && (
-                    <button
-                      onClick={() => setFiltroStatus('todas')}
-                      className="text-sm bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded-xl"
-                    >
-                      Limpar filtro
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => router.push('/ordens')}
-                    className="text-blue-600 font-medium text-sm md:text-base"
-                  >
-                    Ver todas
-                  </button>
-                </div>
+          {carregando ? (
+            <p className="text-slate-400 text-center py-8">
+              Carregando...
+            </p>
+          ) : ordensFiltradas.length === 0 ? (
+            <div className="text-center py-10">
+              <div className="w-14 h-14 mx-auto rounded-full border border-dashed border-slate-500 flex items-center justify-center text-2xl mb-3">
+                📄
               </div>
-
-              {carregando ? (
-                <p>Carregando...</p>
-              ) : ordensFiltradas.length === 0 ? (
-                <p>Nenhuma ordem encontrada para este filtro.</p>
-              ) : (
-                <>
-                  {/* TABELA PC */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b text-slate-500">
-                          <th className="py-3">OS</th>
-                          <th>Cliente</th>
-                          <th>Máquina</th>
-                          <th>Status</th>
-                          <th>Data de abertura</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {ordensFiltradas.slice(0, 5).map((ordem) => (
-                          <tr
-                            key={ordem.id}
-                            className="border-b cursor-pointer hover:bg-slate-50"
-                            onClick={() => router.push(`/ordens/${ordem.id}`)}
-                          >
-                            <td className="py-4">{ordem.numero_os ?? '-'}</td>
-                            <td>{ordem.cliente}</td>
-                            <td>{ordem.maquina}</td>
-                            <td>
-                              <span className={badgeStatus(ordem.status)}>
-                                {ordem.status === 'Aguardando material'
-                                  ? 'Parado'
-                                  : ordem.status}
-                              </span>
-                            </td>
-                            <td>{formatarData(ordem.created_at)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* LISTA MOBILE */}
-                  <div className="md:hidden space-y-3">
-                    {ordensFiltradas.slice(0, 5).map((ordem) => (
-                      <div
-                        key={ordem.id}
-                        onClick={() => router.push(`/ordens/${ordem.id}`)}
-                        className="border rounded-2xl p-4 bg-slate-50 cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between gap-3 mb-2">
-                          <p className="font-bold">OS #{ordem.numero_os ?? '-'}</p>
-                          <span className={badgeStatus(ordem.status)}>
-                            {ordem.status === 'Aguardando material'
-                              ? 'Parado'
-                              : ordem.status}
-                          </span>
-                        </div>
-
-                        <p className="text-sm">
-                          <strong>Cliente:</strong> {ordem.cliente}
-                        </p>
-                        <p className="text-sm mt-1">
-                          <strong>Máquina:</strong> {ordem.maquina}
-                        </p>
-                        <p className="text-sm mt-1">
-                          <strong>Data:</strong> {formatarData(ordem.created_at)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-6 border-t">
-                <ResumoMiniCard valor={ordens.length} titulo="Total de ordens" />
-                <ResumoMiniCard valor={ordens.length} titulo="Abertas este mês" />
-                <ResumoMiniCard
-                  valor={finalizados}
-                  titulo="Finalizadas este mês"
-                />
-              </div>
+              <p className="font-semibold text-slate-300">
+                Nenhuma ordem encontrada
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Ajuste os filtros ou crie uma nova OS
+              </p>
             </div>
+          ) : (
+            <div className="space-y-3">
+              {ordensFiltradas.slice(0, 4).map((ordem) => (
+                <div
+                  key={ordem.id}
+                  onClick={() => router.push(`/ordens/${ordem.id}`)}
+                  className="bg-[#111c2e] border border-slate-700/70 rounded-2xl p-4 active:scale-[0.98] transition"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-bold">OS #{ordem.numero_os ?? '-'}</p>
+                    <span className={badgeStatus(ordem.status)}>
+                      {ordem.status === 'Aguardando material'
+                        ? 'Parado'
+                        : ordem.status}
+                    </span>
+                  </div>
 
-            {/* LATERAL DIREITA */}
-            <div className="space-y-4 md:space-y-6">
-              <div className="bg-white rounded-3xl shadow-sm p-4 md:p-6">
-                <h2 className="text-xl md:text-2xl font-bold mb-5">
-                  Ordem de Serviços
-                </h2>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => router.push('/nova-os')}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-medium text-left px-5"
-                  >
-                    Nova ordem de serviço
-                  </button>
-
-                  <button
-                    onClick={() => setFiltroStatus('em_andamento')}
-                    className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
-                      filtroStatus === 'em_andamento'
-                        ? 'bg-blue-50 border-blue-300 text-blue-700'
-                        : ''
-                    }`}
-                  >
-                    Serviço em andamento
-                  </button>
-
-                  <button
-                    onClick={() => setFiltroStatus('parado')}
-                    className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
-                      filtroStatus === 'parado'
-                        ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                        : ''
-                    }`}
-                  >
-                    Serviço parado
-                  </button>
-
-                  <button
-                    onClick={() => setFiltroStatus('finalizado')}
-                    className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
-                      filtroStatus === 'finalizado'
-                        ? 'bg-green-50 border-green-300 text-green-700'
-                        : ''
-                    }`}
-                  >
-                    Serviço finalizado
-                  </button>
+                  <p className="text-sm text-slate-300">
+                    Cliente: {ordem.cliente}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Máquina: {ordem.maquina}
+                  </p>
                 </div>
-              </div>
-
-              <div className="bg-white rounded-3xl shadow-sm p-4 md:p-6">
-                <h2 className="text-xl md:text-2xl font-bold mb-6">Resumo do mês</h2>
-
-                <div className="space-y-5">
-                  <div>
-                    <div className="flex justify-between mb-2 text-sm md:text-base">
-                      <span className="font-medium">Finalizadas</span>
-                      <span className="font-semibold">
-                        {finalizados} ({percentualFinalizados}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-3 bg-green-500 rounded-full"
-                        style={{ width: `${percentualFinalizados}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between mb-2 text-sm md:text-base">
-                      <span className="font-medium">Em andamento</span>
-                      <span className="font-semibold">
-                        {emAndamento} ({percentualEmAndamento}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-3 bg-blue-600 rounded-full"
-                        style={{ width: `${percentualEmAndamento}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between mb-2 text-sm md:text-base">
-                      <span className="font-medium">Parados</span>
-                      <span className="font-semibold">
-                        {parado} ({percentualParado}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-3 bg-yellow-500 rounded-full"
-                        style={{ width: `${percentualParado}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
 
-          {/* MENU MOBILE FIXO */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-3 py-2 z-50">
-            <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-xs py-2 rounded-xl bg-blue-50 text-blue-600 font-medium"
-              >
-                Dashboard
-              </button>
+          <button
+            onClick={() => setFiltroStatus('todas')}
+            className="fixed right-5 bottom-24 w-14 h-14 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-2xl"
+          >
+            🔽
+          </button>
+        </section>
+      </main>
 
-              <button
-                onClick={() => router.push('/ordens')}
-                className="text-xs py-2 rounded-xl border"
-              >
-                Ordens
-              </button>
-
-              <button
-                onClick={() => router.push('/faturamento')}
-                className="text-xs py-2 rounded-xl border"
-              >
-                Faturamento
-              </button>
-
-              <button
-                onClick={() => router.push('/configuracao')}
-                className="text-xs py-2 rounded-xl border"
-              >
-                Config.
-              </button>
-            </div>
-          </div>
-
-          {/* ESPAÇO PARA MENU FIXO MOBILE */}
-          <div className="h-20 md:hidden" />
-        </main>
-      </div>
+      {/* MENU INFERIOR MOBILE */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0b1423]/95 backdrop-blur border-t border-slate-700 px-3 py-2">
+        <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
+          <MenuItem ativo titulo="Dashboard" icone="▦" onClick={() => router.push('/dashboard')} />
+          <MenuItem titulo="Ordens" icone="📋" onClick={() => router.push('/ordens')} />
+          <MenuItem titulo="Faturamento" icone="💲" onClick={() => router.push('/faturamento')} />
+          <MenuItem titulo="Config." icone="⚙️" onClick={() => router.push('/configuracao')} />
+        </div>
+      </nav>
     </div>
   )
 }
 
-function DashboardCard({
+function Atalho({
+  titulo,
+  icone,
+  onClick,
+}: {
+  titulo: string
+  icone: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="bg-[#121c2c] border border-slate-700 rounded-xl p-3 text-center active:scale-95"
+    >
+      <div className="text-lg mb-1">{icone}</div>
+      <p className="text-[11px] text-slate-300">{titulo}</p>
+    </button>
+  )
+}
+
+function AtalhoAzul({
+  titulo,
+  icone,
+  onClick,
+}: {
+  titulo: string
+  icone: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="bg-blue-600 border border-blue-400/30 rounded-xl p-3 text-center active:scale-95"
+    >
+      <div className="text-lg mb-1">{icone}</div>
+      <p className="text-[11px] text-white">{titulo}</p>
+    </button>
+  )
+}
+
+function CardResumo({
   titulo,
   valor,
   subtitulo,
+  icone,
+  cor,
+  onClick,
 }: {
   titulo: string
   valor: number
   subtitulo: string
+  icone: string
+  cor: 'blue' | 'purple' | 'green' | 'red'
+  onClick: () => void
 }) {
+  const cores = {
+    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    green: 'text-green-400 bg-green-500/10 border-green-500/20',
+    red: 'text-red-400 bg-red-500/10 border-red-500/20',
+  }
+
   return (
-    <div className="bg-white rounded-3xl shadow-sm p-4 md:p-6">
-      <p className="text-slate-500 text-sm md:text-base">{titulo}</p>
-      <p className="text-3xl md:text-4xl font-bold mt-2 md:mt-3">{valor}</p>
-      <p className="text-slate-400 mt-2 text-xs md:text-sm">{subtitulo}</p>
-    </div>
+    <button
+      onClick={onClick}
+      className="bg-[#0d1726] rounded-2xl p-4 border border-slate-700/60 text-left shadow-lg active:scale-[0.98]"
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <p className={`text-sm ${cores[cor].split(' ')[0]}`}>
+            {titulo}
+          </p>
+          <p className="text-3xl font-bold mt-3">{valor}</p>
+          <p className="text-xs text-slate-500 mt-1">{subtitulo}</p>
+        </div>
+
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${cores[cor]}`}>
+          {icone}
+        </div>
+      </div>
+    </button>
   )
 }
 
-function ResumoMiniCard({
-  valor,
+function MenuItem({
   titulo,
+  icone,
+  ativo,
+  onClick,
 }: {
-  valor: number
   titulo: string
+  icone: string
+  ativo?: boolean
+  onClick: () => void
 }) {
   return (
-    <div>
-      <p className="text-2xl font-bold">{valor}</p>
-      <p className="text-slate-500 text-sm">{titulo}</p>
-    </div>
+    <button
+      onClick={onClick}
+      className={`py-2 rounded-xl text-xs flex flex-col items-center gap-1 ${
+        ativo ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400'
+      }`}
+    >
+      <span className="text-lg">{icone}</span>
+      {titulo}
+    </button>
   )
 }
 
 function badgeStatus(status: string) {
   if (status === 'Em andamento') {
-    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-blue-100 text-blue-700'
+    return 'px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400'
   }
 
   if (status === 'Finalizado') {
-    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-green-100 text-green-700'
+    return 'px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400'
   }
 
   if (status === 'Cancelado') {
-    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-red-100 text-red-700'
+    return 'px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400'
   }
 
   if (status === 'Aguardando material') {
-    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-yellow-100 text-yellow-700'
+    return 'px-3 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400'
   }
 
-  return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-slate-100 text-slate-700'
+  return 'px-3 py-1 rounded-full text-xs bg-slate-500/20 text-slate-300'
 }
