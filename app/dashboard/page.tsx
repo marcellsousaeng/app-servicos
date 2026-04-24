@@ -128,283 +128,412 @@ export default function DashboardPage() {
       : 'Últimas Ordens de Serviço'
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
-      <aside className="hidden md:flex w-72 bg-white border-r flex-col justify-between">
-        <div>
-          <div className="p-6 border-b">
-            <h1 className="text-xl font-bold">Sistema OS</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Gestão de Ordens de Serviço
-            </p>
-          </div>
-
-          <nav className="p-4 space-y-2">
-            <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
-              Dashboard
-            </button>
-
-            <button
-              onClick={() => router.push('/ordens')}
-              className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
-            >
-              Ordem de Serviço
-            </button>
-
-            <button
-              onClick={() => router.push('/faturamento')}
-              className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
-            >
-              Faturamento
-            </button>
-
-            <button
-            onClick={() => router.push('/configuracao')}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
-            >
-             Configuração
-           </button>
-          </nav>
-        </div>
-
-        <div className="p-4 border-t">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-              {nomeExibicao.charAt(0).toUpperCase()}
-            </div>
-
-            <div>
-              <p className="font-semibold text-sm">{nomeExibicao}</p>
-              <p className="text-xs text-slate-500">{perfilExibicao}</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-4 md:p-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+    <div className="min-h-screen bg-slate-100">
+      <div className="md:flex">
+        {/* MENU LATERAL - SÓ PC */}
+        <aside className="hidden md:flex md:w-72 bg-white border-r min-h-screen flex-col justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold">
-              Olá, {nomeExibicao}! 👋
-            </h1>
+            <div className="p-6 border-b">
+              <h1 className="text-xl font-bold">Sistema OS</h1>
+              <p className="text-sm text-slate-500 mt-1">
+                Gestão de Ordens de Serviço
+              </p>
+            </div>
 
-            <p className="text-slate-500 mt-2">
-              Aqui está o resumo das ordens de serviço da empresa.
-            </p>
+            <nav className="p-4 space-y-2">
+              <button className="w-full text-left px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
+                Dashboard
+              </button>
+
+              <button
+                onClick={() => router.push('/ordens')}
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
+              >
+                Ordem de Serviço
+              </button>
+
+              <button
+                onClick={() => router.push('/faturamento')}
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
+              >
+                Faturamento
+              </button>
+
+              <button
+                onClick={() => router.push('/configuracao')}
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-slate-100"
+              >
+                Configuração
+              </button>
+            </nav>
           </div>
 
-          <button
-            onClick={sairSistema}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-2xl font-medium"
-          >
-            Sair
-          </button>
-        </div>
+          <div className="p-4 border-t">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                {nomeExibicao.charAt(0).toUpperCase()}
+              </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-          <DashboardCard
-            titulo="Em andamento"
-            valor={emAndamento}
-            subtitulo="Ordens ativas"
-          />
-
-          <DashboardCard
-            titulo="Parado"
-            valor={parado}
-            subtitulo="Ordens"
-          />
-
-          <DashboardCard
-            titulo="Finalizados"
-            valor={finalizados}
-            subtitulo="Este mês"
-          />
-
-          <DashboardCard
-            titulo="Cancelados"
-            valor={cancelados}
-            subtitulo="Este mês"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 bg-white rounded-3xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">{tituloTabela}</h2>
-
-              <div className="flex gap-2">
-                {filtroStatus !== 'todas' && (
-                  <button
-                    onClick={() => setFiltroStatus('todas')}
-                    className="text-sm bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded-xl"
-                  >
-                    Limpar filtro
-                  </button>
-                )}
-
-                <button
-                  onClick={() => router.push('/ordens')}
-                  className="text-blue-600 font-medium"
-                >
-                  Ver todas
-                </button>
+              <div>
+                <p className="font-semibold text-sm">{nomeExibicao}</p>
+                <p className="text-xs text-slate-500">{perfilExibicao}</p>
               </div>
             </div>
+          </div>
+        </aside>
 
-            {carregando ? (
-              <p>Carregando...</p>
-            ) : ordensFiltradas.length === 0 ? (
-              <p>Nenhuma ordem encontrada para este filtro.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b text-slate-500">
-                      <th className="py-3">OS</th>
-                      <th>Cliente</th>
-                      <th>Máquina</th>
-                      <th>Status</th>
-                      <th>Data de abertura</th>
-                    </tr>
-                  </thead>
+        {/* CONTEÚDO */}
+        <main className="flex-1 p-3 md:p-8">
+          {/* TOPO MOBILE */}
+          <div className="md:hidden bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-bold">Sistema OS</h1>
+                <p className="text-sm text-slate-500">Dashboard</p>
+              </div>
 
-                  <tbody>
+              <button
+                onClick={sairSistema}
+                className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-medium"
+              >
+                Sair
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-lg font-bold">Olá, {nomeExibicao}! 👋</p>
+              <p className="text-sm text-slate-500 mt-1">{perfilExibicao}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button
+                onClick={() => router.push('/ordens')}
+                className="bg-white border rounded-xl py-3 text-sm font-medium"
+              >
+                Ordens
+              </button>
+
+              <button
+                onClick={() => router.push('/faturamento')}
+                className="bg-white border rounded-xl py-3 text-sm font-medium"
+              >
+                Faturamento
+              </button>
+
+              <button
+                onClick={() => router.push('/configuracao')}
+                className="bg-white border rounded-xl py-3 text-sm font-medium"
+              >
+                Configuração
+              </button>
+
+              <button
+                onClick={() => router.push('/nova-os')}
+                className="bg-blue-600 text-white rounded-xl py-3 text-sm font-medium"
+              >
+                Nova OS
+              </button>
+            </div>
+          </div>
+
+          {/* TOPO PC */}
+          <div className="hidden md:flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold">
+                Olá, {nomeExibicao}! 👋
+              </h1>
+
+              <p className="text-slate-500 mt-2">
+                Aqui está o resumo das ordens de serviço da empresa.
+              </p>
+            </div>
+
+            <button
+              onClick={sairSistema}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-2xl font-medium"
+            >
+              Sair
+            </button>
+          </div>
+
+          {/* CARDS */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+            <DashboardCard
+              titulo="Em andamento"
+              valor={emAndamento}
+              subtitulo="Ordens ativas"
+            />
+
+            <DashboardCard
+              titulo="Parado"
+              valor={parado}
+              subtitulo="Ordens"
+            />
+
+            <DashboardCard
+              titulo="Finalizados"
+              valor={finalizados}
+              subtitulo="Este mês"
+            />
+
+            <DashboardCard
+              titulo="Cancelados"
+              valor={cancelados}
+              subtitulo="Este mês"
+            />
+          </div>
+
+          {/* ÁREA PRINCIPAL */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+            {/* TABELA / LISTA */}
+            <div className="xl:col-span-2 bg-white rounded-3xl shadow-sm p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+                <h2 className="text-xl md:text-2xl font-bold">{tituloTabela}</h2>
+
+                <div className="flex flex-wrap gap-2">
+                  {filtroStatus !== 'todas' && (
+                    <button
+                      onClick={() => setFiltroStatus('todas')}
+                      className="text-sm bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded-xl"
+                    >
+                      Limpar filtro
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => router.push('/ordens')}
+                    className="text-blue-600 font-medium text-sm md:text-base"
+                  >
+                    Ver todas
+                  </button>
+                </div>
+              </div>
+
+              {carregando ? (
+                <p>Carregando...</p>
+              ) : ordensFiltradas.length === 0 ? (
+                <p>Nenhuma ordem encontrada para este filtro.</p>
+              ) : (
+                <>
+                  {/* TABELA PC */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b text-slate-500">
+                          <th className="py-3">OS</th>
+                          <th>Cliente</th>
+                          <th>Máquina</th>
+                          <th>Status</th>
+                          <th>Data de abertura</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {ordensFiltradas.slice(0, 5).map((ordem) => (
+                          <tr
+                            key={ordem.id}
+                            className="border-b cursor-pointer hover:bg-slate-50"
+                            onClick={() => router.push(`/ordens/${ordem.id}`)}
+                          >
+                            <td className="py-4">{ordem.numero_os ?? '-'}</td>
+                            <td>{ordem.cliente}</td>
+                            <td>{ordem.maquina}</td>
+                            <td>
+                              <span className={badgeStatus(ordem.status)}>
+                                {ordem.status === 'Aguardando material'
+                                  ? 'Parado'
+                                  : ordem.status}
+                              </span>
+                            </td>
+                            <td>{formatarData(ordem.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* LISTA MOBILE */}
+                  <div className="md:hidden space-y-3">
                     {ordensFiltradas.slice(0, 5).map((ordem) => (
-                      <tr
+                      <div
                         key={ordem.id}
-                        className="border-b cursor-pointer hover:bg-slate-50"
                         onClick={() => router.push(`/ordens/${ordem.id}`)}
+                        className="border rounded-2xl p-4 bg-slate-50 cursor-pointer"
                       >
-                        <td className="py-4">{ordem.numero_os ?? '-'}</td>
-                        <td>{ordem.cliente}</td>
-                        <td>{ordem.maquina}</td>
-                        <td>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <p className="font-bold">OS #{ordem.numero_os ?? '-'}</p>
                           <span className={badgeStatus(ordem.status)}>
                             {ordem.status === 'Aguardando material'
                               ? 'Parado'
                               : ordem.status}
                           </span>
-                        </td>
-                        <td>{formatarData(ordem.created_at)}</td>
-                      </tr>
+                        </div>
+
+                        <p className="text-sm">
+                          <strong>Cliente:</strong> {ordem.cliente}
+                        </p>
+                        <p className="text-sm mt-1">
+                          <strong>Máquina:</strong> {ordem.maquina}
+                        </p>
+                        <p className="text-sm mt-1">
+                          <strong>Data:</strong> {formatarData(ordem.created_at)}
+                        </p>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  </div>
+                </>
+              )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pt-6 border-t">
-              <ResumoMiniCard valor={ordens.length} titulo="Total de ordens" />
-              <ResumoMiniCard
-                valor={ordens.length}
-                titulo="Abertas este mês"
-              />
-              <ResumoMiniCard
-                valor={finalizados}
-                titulo="Finalizadas este mês"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-6 border-t">
+                <ResumoMiniCard valor={ordens.length} titulo="Total de ordens" />
+                <ResumoMiniCard valor={ordens.length} titulo="Abertas este mês" />
+                <ResumoMiniCard
+                  valor={finalizados}
+                  titulo="Finalizadas este mês"
+                />
+              </div>
+            </div>
+
+            {/* LATERAL DIREITA */}
+            <div className="space-y-4 md:space-y-6">
+              <div className="bg-white rounded-3xl shadow-sm p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold mb-5">
+                  Ordem de Serviços
+                </h2>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={() => router.push('/nova-os')}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-medium text-left px-5"
+                  >
+                    Nova ordem de serviço
+                  </button>
+
+                  <button
+                    onClick={() => setFiltroStatus('em_andamento')}
+                    className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
+                      filtroStatus === 'em_andamento'
+                        ? 'bg-blue-50 border-blue-300 text-blue-700'
+                        : ''
+                    }`}
+                  >
+                    Serviço em andamento
+                  </button>
+
+                  <button
+                    onClick={() => setFiltroStatus('parado')}
+                    className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
+                      filtroStatus === 'parado'
+                        ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                        : ''
+                    }`}
+                  >
+                    Serviço parado
+                  </button>
+
+                  <button
+                    onClick={() => setFiltroStatus('finalizado')}
+                    className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
+                      filtroStatus === 'finalizado'
+                        ? 'bg-green-50 border-green-300 text-green-700'
+                        : ''
+                    }`}
+                  >
+                    Serviço finalizado
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl shadow-sm p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold mb-6">Resumo do mês</h2>
+
+                <div className="space-y-5">
+                  <div>
+                    <div className="flex justify-between mb-2 text-sm md:text-base">
+                      <span className="font-medium">Finalizadas</span>
+                      <span className="font-semibold">
+                        {finalizados} ({percentualFinalizados}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-3 bg-green-500 rounded-full"
+                        style={{ width: `${percentualFinalizados}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between mb-2 text-sm md:text-base">
+                      <span className="font-medium">Em andamento</span>
+                      <span className="font-semibold">
+                        {emAndamento} ({percentualEmAndamento}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-3 bg-blue-600 rounded-full"
+                        style={{ width: `${percentualEmAndamento}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between mb-2 text-sm md:text-base">
+                      <span className="font-medium">Parados</span>
+                      <span className="font-semibold">
+                        {parado} ({percentualParado}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-3 bg-yellow-500 rounded-full"
+                        style={{ width: `${percentualParado}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl shadow-sm p-6">
-              <h2 className="text-2xl font-bold mb-6">Ordem de Serviços</h2>
+          {/* MENU MOBILE FIXO */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-3 py-2 z-50">
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="text-xs py-2 rounded-xl bg-blue-50 text-blue-600 font-medium"
+              >
+                Dashboard
+              </button>
 
-              <div className="space-y-4">
-                <button
-                  onClick={() => router.push('/nova-os')}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-medium text-left px-5"
-                >
-                  Nova ordem de serviço
-                </button>
+              <button
+                onClick={() => router.push('/ordens')}
+                className="text-xs py-2 rounded-xl border"
+              >
+                Ordens
+              </button>
 
-                <button
-                  onClick={() => setFiltroStatus('em_andamento')}
-                  className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
-                    filtroStatus === 'em_andamento'
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
-                      : ''
-                  }`}
-                >
-                  Serviço em andamento
-                </button>
+              <button
+                onClick={() => router.push('/faturamento')}
+                className="text-xs py-2 rounded-xl border"
+              >
+                Faturamento
+              </button>
 
-                <button
-                  onClick={() => setFiltroStatus('parado')}
-                  className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
-                    filtroStatus === 'parado'
-                      ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                      : ''
-                  }`}
-                >
-                  Serviço parado
-                </button>
-
-                <button
-                  onClick={() => setFiltroStatus('finalizado')}
-                  className={`w-full border py-4 rounded-2xl font-medium text-left px-5 ${
-                    filtroStatus === 'finalizado'
-                      ? 'bg-green-50 border-green-300 text-green-700'
-                      : ''
-                  }`}
-                >
-                  Serviço finalizado
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-sm p-6">
-              <h2 className="text-2xl font-bold mb-6">Resumo do mês</h2>
-
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="font-medium">Finalizadas</span>
-                    <span className="font-semibold">
-                      {finalizados} ({percentualFinalizados}%)
-                    </span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-3 bg-green-500 rounded-full"
-                      style={{ width: `${percentualFinalizados}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="font-medium">Em andamento</span>
-                    <span className="font-semibold">
-                      {emAndamento} ({percentualEmAndamento}%)
-                    </span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-3 bg-blue-600 rounded-full"
-                      style={{ width: `${percentualEmAndamento}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="font-medium">Parados</span>
-                    <span className="font-semibold">
-                      {parado} ({percentualParado}%)
-                    </span>
-                  </div>
-                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-3 bg-yellow-500 rounded-full"
-                      style={{ width: `${percentualParado}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
+              <button
+                onClick={() => router.push('/configuracao')}
+                className="text-xs py-2 rounded-xl border"
+              >
+                Config.
+              </button>
             </div>
           </div>
-        </div>
-      </main>
+
+          {/* ESPAÇO PARA MENU FIXO MOBILE */}
+          <div className="h-20 md:hidden" />
+        </main>
+      </div>
     </div>
   )
 }
@@ -419,10 +548,10 @@ function DashboardCard({
   subtitulo: string
 }) {
   return (
-    <div className="bg-white rounded-3xl shadow-sm p-6">
-      <p className="text-slate-500">{titulo}</p>
-      <p className="text-4xl font-bold mt-3">{valor}</p>
-      <p className="text-slate-400 mt-2">{subtitulo}</p>
+    <div className="bg-white rounded-3xl shadow-sm p-4 md:p-6">
+      <p className="text-slate-500 text-sm md:text-base">{titulo}</p>
+      <p className="text-3xl md:text-4xl font-bold mt-2 md:mt-3">{valor}</p>
+      <p className="text-slate-400 mt-2 text-xs md:text-sm">{subtitulo}</p>
     </div>
   )
 }
@@ -437,27 +566,27 @@ function ResumoMiniCard({
   return (
     <div>
       <p className="text-2xl font-bold">{valor}</p>
-      <p className="text-slate-500">{titulo}</p>
+      <p className="text-slate-500 text-sm">{titulo}</p>
     </div>
   )
 }
 
 function badgeStatus(status: string) {
   if (status === 'Em andamento') {
-    return 'inline-block px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700'
+    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-blue-100 text-blue-700'
   }
 
   if (status === 'Finalizado') {
-    return 'inline-block px-3 py-1 rounded-full text-sm bg-green-100 text-green-700'
+    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-green-100 text-green-700'
   }
 
   if (status === 'Cancelado') {
-    return 'inline-block px-3 py-1 rounded-full text-sm bg-red-100 text-red-700'
+    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-red-100 text-red-700'
   }
 
   if (status === 'Aguardando material') {
-    return 'inline-block px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-700'
+    return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-yellow-100 text-yellow-700'
   }
 
-  return 'inline-block px-3 py-1 rounded-full text-sm bg-slate-100 text-slate-700'
+  return 'inline-block px-3 py-1 rounded-full text-xs md:text-sm bg-slate-100 text-slate-700'
 }
