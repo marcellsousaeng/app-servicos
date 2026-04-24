@@ -39,7 +39,7 @@ export default function DetalhesOSPage() {
   const router = useRouter()
 
   const [ordem, setOrdem] = useState<OrdemServico | null>(null)
-  const [nomeResponsavel, setNomeResponsavel] = useState<string>('-')
+  const [nomeResponsavel, setNomeResponsavel] = useState('-')
   const [atualizacoes, setAtualizacoes] = useState<Atualizacao[]>([])
   const [carregando, setCarregando] = useState(true)
 
@@ -47,12 +47,13 @@ export default function DetalhesOSPage() {
   const [materialUtilizado, setMaterialUtilizado] = useState('')
   const [tecnicosResponsaveis, setTecnicosResponsaveis] = useState('')
   const [salvandoAtualizacao, setSalvandoAtualizacao] = useState(false)
+  const [modalAtualizacao, setModalAtualizacao] = useState(false)
 
   useEffect(() => {
     carregarDetalhes()
   }, [])
 
-  const carregarDetalhes = async () => {
+  async function carregarDetalhes() {
     const id = Number(params.id)
 
     const { data, error } = await supabase
@@ -61,10 +62,7 @@ export default function DetalhesOSPage() {
       .eq('id', id)
       .single()
 
-    console.log('DETALHES OS:', data)
-    console.log('ERRO DETALHES OS:', error)
-
-    if (error) {
+    if (error || !data) {
       alert('Erro ao carregar detalhes da OS')
       setCarregando(false)
       return
@@ -86,43 +84,31 @@ export default function DetalhesOSPage() {
       usuarioEncontrado?.nome || data.usuario_responsavel || '-'
     )
 
-    const { data: dadosAtualizacoes, error: erroAtualizacoes } = await supabase
+    const { data: dadosAtualizacoes } = await supabase
       .from('os_atualizacoes')
       .select('*')
       .eq('ordem_servico_id', id)
       .order('created_at', { ascending: false })
 
-    console.log('ATUALIZACOES OS:', dadosAtualizacoes)
-    console.log('ERRO ATUALIZACOES OS:', erroAtualizacoes)
-
-    if (!erroAtualizacoes) {
-      setAtualizacoes(dadosAtualizacoes || [])
-    }
-
+    setAtualizacoes(dadosAtualizacoes || [])
     setCarregando(false)
   }
 
-  const buscarNomeUsuario = async () => {
+  async function buscarNomeUsuario() {
     const usuarioSalvo = localStorage.getItem('usuario')
 
-    if (!usuarioSalvo) {
-      return 'Usuário'
-    }
+    if (!usuarioSalvo) return 'Usuário'
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('usuarios')
       .select('nome')
       .eq('usuario', usuarioSalvo)
       .single()
 
-    if (error || !data) {
-      return usuarioSalvo
-    }
-
-    return data.nome || usuarioSalvo
+    return data?.nome || usuarioSalvo
   }
 
-  const salvarAtualizacao = async () => {
+  async function salvarAtualizacao() {
     if (!ordem) return
 
     if (ordem.status === 'Finalizado') {
@@ -135,47 +121,36 @@ export default function DetalhesOSPage() {
       return
     }
 
-    try {
-      setSalvandoAtualizacao(true)
+    setSalvandoAtualizacao(true)
 
-      const nomeUsuario = await buscarNomeUsuario()
+    const nomeUsuario = await buscarNomeUsuario()
 
-      const { error } = await supabase
-        .from('os_atualizacoes')
-        .insert([
-          {
-            ordem_servico_id: ordem.id,
-            descricao: descricaoAtualizacao,
-            material_utilizado: materialUtilizado,
-            tecnicos_responsaveis: tecnicosResponsaveis,
-            usuario_nome: nomeUsuario,
-          },
-        ])
+    const { error } = await supabase.from('os_atualizacoes').insert([
+      {
+        ordem_servico_id: ordem.id,
+        descricao: descricaoAtualizacao,
+        material_utilizado: materialUtilizado,
+        tecnicos_responsaveis: tecnicosResponsaveis,
+        usuario_nome: nomeUsuario,
+      },
+    ])
 
-      console.log('ERRO SALVAR ATUALIZACAO:', error)
-
-      if (error) {
-        alert('Erro ao salvar atualização')
-        setSalvandoAtualizacao(false)
-        return
-      }
-
-      alert('Atualização salva com sucesso!')
-
-      setDescricaoAtualizacao('')
-      setMaterialUtilizado('')
-      setTecnicosResponsaveis('')
+    if (error) {
+      alert('Erro ao salvar atualização')
       setSalvandoAtualizacao(false)
-
-      carregarDetalhes()
-    } catch (err) {
-      console.log('ERRO INESPERADO ATUALIZACAO:', err)
-      alert('Erro inesperado ao salvar atualização')
-      setSalvandoAtualizacao(false)
+      return
     }
+
+    setDescricaoAtualizacao('')
+    setMaterialUtilizado('')
+    setTecnicosResponsaveis('')
+    setSalvandoAtualizacao(false)
+    setModalAtualizacao(false)
+
+    carregarDetalhes()
   }
 
-  const finalizarOS = async () => {
+  async function finalizarOS() {
     if (!ordem) return
 
     const { error } = await supabase
@@ -192,11 +167,10 @@ export default function DetalhesOSPage() {
       return
     }
 
-    alert('OS finalizada com sucesso!')
     carregarDetalhes()
   }
 
-  const cancelarOS = async () => {
+  async function cancelarOS() {
     if (!ordem) return
 
     const motivo = prompt('Informe o motivo do cancelamento')
@@ -217,218 +191,373 @@ export default function DetalhesOSPage() {
       return
     }
 
-    alert('OS cancelada com sucesso!')
     carregarDetalhes()
   }
 
-  const editarOS = () => {
-    alert('Próximo passo: criar a tela de edição da OS')
-  }
-
-  const formatarData = (data: string) => {
+  function formatarData(data: string) {
     return new Date(data).toLocaleDateString('pt-BR')
   }
 
-  const formatarDataHora = (data: string) => {
+  function formatarDataHora(data: string) {
     return new Date(data).toLocaleString('pt-BR')
   }
 
   const osFinalizada = ordem?.status === 'Finalizado'
+  const osCancelada = ordem?.status === 'Cancelado'
 
   if (carregando) {
     return (
-      <div className="min-h-screen bg-slate-100 p-8">
-        <p>Carregando detalhes...</p>
+      <div className="min-h-screen bg-[#07111f] text-white flex items-center justify-center">
+        Carregando relatório...
       </div>
     )
   }
 
   if (!ordem) {
     return (
-      <div className="min-h-screen bg-slate-100 p-8">
-        <p>OS não encontrada.</p>
+      <div className="min-h-screen bg-[#07111f] text-white flex items-center justify-center">
+        OS não encontrada.
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-md p-8 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => router.push('/ordens')}
-              className="bg-gray-200 px-4 py-2 rounded-lg"
-            >
-              ← Voltar
-            </button>
+    <div className="min-h-screen bg-[#07111f] text-white pb-28">
+      <main className="max-w-md mx-auto px-4 pt-5">
+        {/* TOPO */}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <button
+            onClick={() => router.push('/ordens')}
+            className="w-12 h-12 rounded-2xl bg-[#0d1726] border border-slate-700 flex items-center justify-center text-xl"
+          >
+            ‹
+          </button>
 
-            <h1 className="text-3xl font-bold">
+          <div className="flex-1">
+            <h1 className="text-xl font-bold">
               Ordem de Serviço #{ordem.numero_os ?? '-'}
             </h1>
+            <span className={badgeStatus(ordem.status)}>
+              {ordem.status === 'Aguardando material' ? 'Parado' : ordem.status}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <p><strong>Cliente:</strong> {ordem.cliente}</p>
-              <p><strong>Solicitante:</strong> {ordem.solicitante || '-'}</p>
-              <p><strong>Máquina:</strong> {ordem.maquina}</p>
-              <p><strong>Descrição:</strong> {ordem.descricao}</p>
-            </div>
-
-            <div className="space-y-4">
-              <p><strong>Status:</strong> {ordem.status}</p>
-              <p><strong>Responsável:</strong> {nomeResponsavel}</p>
-              <p><strong>Data de entrada:</strong> {formatarData(ordem.created_at)}</p>
-
-              {ordem.cancelada && (
-                <p className="text-red-600">
-                  <strong>Motivo cancelamento:</strong>{' '}
-                  {ordem.motivo_cancelamento || '-'}
-                </p>
-              )}
-            </div>
-          </div>
+          {osFinalizada || osCancelada ? (
+            <button
+              onClick={() => alert('Próximo passo: criar tela de edição')}
+              className="h-12 px-4 rounded-2xl bg-[#0d1726] border border-blue-500/30 text-blue-400 text-sm font-semibold"
+            >
+              ✎ Editar
+            </button>
+          ) : (
+            <button
+              onClick={() => setModalAtualizacao(true)}
+              className="h-12 px-4 rounded-2xl bg-[#0d1726] border border-blue-500/30 text-blue-400 text-sm font-semibold"
+            >
+              + Atualizar
+            </button>
+          )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-8 mb-6">
-          <h2 className="text-2xl font-bold mb-4">
-            Foto inicial do serviço
-          </h2>
+        {/* INFORMAÇÕES */}
+        <section className="bg-[#0d1726] rounded-3xl p-5 border border-slate-700/70 shadow-xl mb-4">
+          <div className="flex items-center gap-2 mb-5">
+            <span className="text-blue-400">📋</span>
+            <h2 className="font-bold">Informações da OS</h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <InfoItem icone="👤" titulo="Cliente" texto={ordem.cliente} />
+            <InfoItem
+              icone="⟳"
+              titulo="Status"
+              texto={ordem.status === 'Aguardando material' ? 'Parado' : ordem.status}
+            />
+            <InfoItem
+              icone="👤"
+              titulo="Solicitante"
+              texto={ordem.solicitante || '-'}
+            />
+            <InfoItem icone="👤" titulo="Responsável" texto={nomeResponsavel} />
+            <InfoItem icone="🖥️" titulo="Máquina" texto={ordem.maquina} />
+            <InfoItem
+              icone="📅"
+              titulo="Data de entrada"
+              texto={formatarData(ordem.created_at)}
+            />
+            <InfoItem
+              icone="📄"
+              titulo="Descrição"
+              texto={ordem.descricao}
+              full
+            />
+
+            {ordem.cancelada && (
+              <InfoItem
+                icone="⚠️"
+                titulo="Motivo do cancelamento"
+                texto={ordem.motivo_cancelamento || '-'}
+                full
+              />
+            )}
+          </div>
+        </section>
+
+        {/* FOTO */}
+        <section className="bg-[#0d1726] rounded-3xl p-5 border border-slate-700/70 shadow-xl mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-blue-400">📷</span>
+            <h2 className="font-bold">Foto inicial do serviço</h2>
+          </div>
 
           {ordem.foto_url ? (
-            <img
-              src={ordem.foto_url}
-              alt="Foto da OS"
-              className="w-full max-w-md rounded-xl border object-cover"
-            />
+            <div className="relative">
+              <img
+                src={ordem.foto_url}
+                alt="Foto inicial do serviço"
+                className="w-full h-52 object-cover rounded-2xl border border-slate-700"
+              />
+
+              <a
+                href={ordem.foto_url}
+                target="_blank"
+                className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/60 flex items-center justify-center"
+              >
+                🔍
+              </a>
+            </div>
           ) : (
-            <div className="bg-slate-100 border rounded-xl p-10 text-center text-gray-500">
+            <div className="h-44 rounded-2xl border border-dashed border-slate-600 flex items-center justify-center text-slate-500">
               Nenhuma foto cadastrada
             </div>
           )}
+        </section>
 
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold mb-4">
-              Relatório de atualizações
-            </h2>
+        {/* ATUALIZAÇÕES */}
+        <section className="bg-[#0d1726] rounded-3xl p-5 border border-slate-700/70 shadow-xl mb-4">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <span className="text-purple-400">🧾</span>
+              <h2 className="font-bold">Atualização do Serviço</h2>
+            </div>
 
-            {atualizacoes.length === 0 ? (
-              <p className="text-gray-500">
-                Nenhuma atualização cadastrada ainda.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {atualizacoes.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border rounded-xl p-4 bg-slate-50"
-                  >
-                    <div className="flex justify-between items-start gap-4 mb-3">
-                      <div>
-                        <p className="font-semibold">
-                          {item.usuario_nome || 'Usuário'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {formatarDataHora(item.created_at)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="mb-3">
-                      <strong>Atualização:</strong> {item.descricao}
-                    </p>
-
-                    <p className="mb-2">
-                      <strong>Material utilizado:</strong>{' '}
-                      {item.material_utilizado || '-'}
-                    </p>
-
-                    <p>
-                      <strong>Técnicos responsáveis:</strong>{' '}
-                      {item.tecnicos_responsaveis || '-'}
-                    </p>
-                  </div>
-                ))}
-              </div>
+            {!osFinalizada && !osCancelada && (
+              <button
+                onClick={() => setModalAtualizacao(true)}
+                className="px-4 py-2 rounded-xl bg-[#111c2e] border border-blue-500/30 text-blue-400 text-sm"
+              >
+                ✎ Editar
+              </button>
             )}
           </div>
-        </div>
 
-        {!osFinalizada && (
-          <div className="bg-white rounded-2xl shadow-md p-8 mb-6">
-            <h2 className="text-2xl font-bold mb-6">
-              Atualização do Serviço
-            </h2>
-
+          {atualizacoes.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Nenhuma atualização cadastrada ainda.
+            </p>
+          ) : (
             <div className="space-y-4">
+              {atualizacoes.map((item) => (
+                <div
+                  key={item.id}
+                  className="border-b border-slate-700 pb-4 last:border-b-0 last:pb-0"
+                >
+                  <p className="font-semibold text-slate-200">
+                    {item.usuario_nome || 'Usuário'}
+                  </p>
+                  <p className="text-xs text-slate-500 mb-3">
+                    {formatarDataHora(item.created_at)}
+                  </p>
+
+                  <InfoLinha
+                    icone="📄"
+                    titulo="Descrição da atualização"
+                    texto={item.descricao}
+                  />
+
+                  <InfoLinha
+                    icone="🧰"
+                    titulo="Material utilizado"
+                    texto={item.material_utilizado || '-'}
+                  />
+
+                  <InfoLinha
+                    icone="👥"
+                    titulo="Técnicos responsáveis"
+                    texto={item.tecnicos_responsaveis || '-'}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {/* BOTÕES FIXOS */}
+      {!osFinalizada && !osCancelada && (
+        <div className="fixed bottom-[72px] left-0 right-0 px-4">
+          <div className="max-w-md mx-auto grid grid-cols-2 gap-2">
+            <button
+              onClick={finalizarOS}
+              className="bg-green-600 text-white py-4 rounded-xl font-semibold shadow-lg"
+            >
+              ⊙ Finalizar OS
+            </button>
+
+            <button
+              onClick={cancelarOS}
+              className="bg-red-600 text-white py-4 rounded-xl font-semibold shadow-lg"
+            >
+              ⊗ Cancelar OS
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MENU INFERIOR */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0b1423]/95 backdrop-blur border-t border-slate-700 px-3 py-2">
+        <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
+          <MenuItem titulo="Dashboard" icone="▦" onClick={() => router.push('/dashboard')} />
+          <MenuItem ativo titulo="Ordens" icone="📋" onClick={() => router.push('/ordens')} />
+          <MenuItem titulo="Faturamento" icone="$" onClick={() => router.push('/faturamento')} />
+          <MenuItem titulo="Config." icone="⚙️" onClick={() => router.push('/configuracao')} />
+        </div>
+      </nav>
+
+      {/* MODAL ATUALIZAÇÃO */}
+      {modalAtualizacao && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+          <div className="bg-[#0d1726] border-t border-slate-700 rounded-t-3xl p-5 w-full max-w-md mx-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold">Nova atualização</h2>
+
+              <button
+                onClick={() => setModalAtualizacao(false)}
+                className="w-10 h-10 rounded-full bg-[#111c2e]"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-3">
               <textarea
-                placeholder="Descreva a atualização do serviço realizado..."
+                placeholder="Descrição da atualização"
                 value={descricaoAtualizacao}
                 onChange={(e) => setDescricaoAtualizacao(e.target.value)}
-                className="w-full border rounded-xl p-4 h-32"
+                className="w-full bg-[#111c2e] border border-slate-700 rounded-2xl p-4 outline-none min-h-28 resize-none"
               />
 
               <input
-                type="text"
                 placeholder="Material utilizado"
                 value={materialUtilizado}
                 onChange={(e) => setMaterialUtilizado(e.target.value)}
-                className="w-full border rounded-xl p-4"
+                className="w-full bg-[#111c2e] border border-slate-700 rounded-2xl p-4 outline-none"
               />
 
               <input
-                type="text"
                 placeholder="Técnicos responsáveis"
                 value={tecnicosResponsaveis}
                 onChange={(e) => setTecnicosResponsaveis(e.target.value)}
-                className="w-full border rounded-xl p-4"
+                className="w-full bg-[#111c2e] border border-slate-700 rounded-2xl p-4 outline-none"
               />
 
               <button
                 onClick={salvarAtualizacao}
                 disabled={salvandoAtualizacao}
-                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold disabled:opacity-60"
+                className="w-full bg-blue-600 py-4 rounded-2xl font-semibold disabled:opacity-60"
               >
-                {salvandoAtualizacao ? 'Salvando...' : 'Salvar Atualização'}
+                {salvandoAtualizacao ? 'Salvando...' : 'Salvar atualização'}
               </button>
             </div>
           </div>
-        )}
-
-        <div className="bg-white rounded-2xl shadow-md p-8">
-          <h2 className="text-2xl font-bold mb-6">
-            Encerramento da Ordem
-          </h2>
-
-          {osFinalizada ? (
-            <div className="flex gap-4">
-              <button
-                onClick={editarOS}
-                className="bg-yellow-500 text-white px-8 py-3 rounded-xl font-semibold"
-              >
-                Editar OS
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-4">
-              <button
-                onClick={finalizarOS}
-                className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold"
-              >
-                Finalizar OS
-              </button>
-
-              <button
-                onClick={cancelarOS}
-                className="bg-red-600 text-white px-8 py-3 rounded-xl font-semibold"
-              >
-                Cancelar OS
-              </button>
-            </div>
-          )}
         </div>
+      )}
+    </div>
+  )
+}
+
+function InfoItem({
+  icone,
+  titulo,
+  texto,
+  full,
+}: {
+  icone: string
+  titulo: string
+  texto: string
+  full?: boolean
+}) {
+  return (
+    <div className={`flex gap-3 ${full ? 'col-span-2' : ''}`}>
+      <span className="text-blue-400 mt-1">{icone}</span>
+      <div>
+        <p className="text-xs text-slate-500">{titulo}</p>
+        <p className="text-sm text-slate-200">{texto}</p>
       </div>
     </div>
   )
+}
+
+function InfoLinha({
+  icone,
+  titulo,
+  texto,
+}: {
+  icone: string
+  titulo: string
+  texto: string
+}) {
+  return (
+    <div className="flex gap-3 mb-3">
+      <span className="text-slate-500 mt-1">{icone}</span>
+      <div>
+        <p className="text-xs text-slate-500">{titulo}</p>
+        <p className="text-sm text-slate-200">{texto}</p>
+      </div>
+    </div>
+  )
+}
+
+function MenuItem({
+  titulo,
+  icone,
+  ativo,
+  onClick,
+}: {
+  titulo: string
+  icone: string
+  ativo?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`py-2 rounded-2xl text-xs flex flex-col items-center justify-center gap-1 ${
+        ativo ? 'bg-blue-600/25 text-blue-400' : 'text-slate-400'
+      }`}
+    >
+      <span className="text-xl">{icone}</span>
+      <span>{titulo}</span>
+    </button>
+  )
+}
+
+function badgeStatus(status: string) {
+  if (status === 'Em andamento') {
+    return 'inline-block px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400'
+  }
+
+  if (status === 'Finalizado') {
+    return 'inline-block px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400'
+  }
+
+  if (status === 'Cancelado') {
+    return 'inline-block px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400'
+  }
+
+  if (status === 'Aguardando material') {
+    return 'inline-block px-3 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400'
+  }
+
+  return 'inline-block px-3 py-1 rounded-full text-xs bg-slate-500/20 text-slate-300'
 }
