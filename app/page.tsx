@@ -35,17 +35,12 @@ export default function LoginPage() {
     }
 
     localStorage.setItem('usuario', data.usuario)
-    localStorage.setItem('nome', data.nome || data.usuario)
-    localStorage.setItem('nivel', data.nivel || '')
-    localStorage.setItem('cargo', data.cargo || '')
-
     router.push('/dashboard')
   }
 
   return (
     <div className="min-h-screen bg-[#07111f] text-white flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* LOGO */}
         <div className="flex justify-center mb-6">
           <div className="relative w-[260px] h-[180px]">
             <Image
@@ -58,32 +53,25 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* CARD LOGIN */}
         <div className="bg-[#0d1726] border border-slate-700/70 rounded-3xl p-6 shadow-2xl">
           <div className="flex items-start gap-4 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-2xl shadow-lg">
-              🔒
+            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg">
+              <LockIcon />
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold">
-                Sistema de Serviços
-              </h1>
-
+              <h1 className="text-2xl font-bold">Sistema de Serviços</h1>
               <p className="text-sm text-slate-400 mt-1">
                 Acesse sua conta para continuar
               </p>
             </div>
           </div>
 
-          {/* USUÁRIO */}
           <div className="mb-4">
-            <label className="text-sm text-slate-400 mb-2 block">
-              Usuário
-            </label>
+            <label className="text-sm text-slate-400 mb-2 block">Usuário</label>
 
             <div className="bg-[#111c2e] border border-slate-700 rounded-2xl px-4 py-4 flex items-center gap-3">
-              <span className="text-blue-400">👤</span>
+              <UserIcon />
 
               <input
                 type="text"
@@ -95,14 +83,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* SENHA */}
           <div className="mb-5">
-            <label className="text-sm text-slate-400 mb-2 block">
-              Senha
-            </label>
+            <label className="text-sm text-slate-400 mb-2 block">Senha</label>
 
             <div className="bg-[#111c2e] border border-slate-700 rounded-2xl px-4 py-4 flex items-center gap-3">
-              <span className="text-blue-400">🔒</span>
+              <SmallLockIcon />
 
               <input
                 type={mostrarSenha ? 'text' : 'password'}
@@ -115,14 +100,13 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setMostrarSenha(!mostrarSenha)}
-                className="text-slate-400"
+                className="text-slate-400 hover:text-blue-400 transition"
               >
-                👁️
+                {mostrarSenha ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
           </div>
 
-          {/* BOTÃO LOGIN */}
           <button
             onClick={fazerLogin}
             disabled={carregando}
@@ -131,33 +115,70 @@ export default function LoginPage() {
             {carregando ? 'Entrando...' : '↪ Entrar'}
           </button>
 
-          {/* DIVISOR */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-slate-700" />
             <span className="text-slate-500 text-sm">ou</span>
             <div className="flex-1 h-px bg-slate-700" />
           </div>
 
-          {/* ESQUECI SENHA */}
           <button
             type="button"
             className="w-full border border-slate-700 rounded-2xl py-4 text-blue-400 hover:bg-[#111c2e] transition"
             onClick={() =>
-              alert(
-                'Procure o administrador do sistema para redefinir sua senha.'
-              )
+              alert('Procure o administrador do sistema para redefinir sua senha.')
             }
           >
             🛡️ Esqueci minha senha
           </button>
         </div>
-
-        {/* RODAPÉ */}
-        <div className="text-center mt-8 text-sm text-slate-500">
-          <p>© 2025 Divisa Tornearia</p>
-          <p>Todos os direitos reservados.</p>
-        </div>
       </div>
     </div>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="10" width="14" height="10" rx="3" stroke="white" strokeWidth="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="15" r="1.5" fill="white" />
+    </svg>
+  )
+}
+
+function SmallLockIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+      <rect x="5" y="10" width="14" height="10" rx="3" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function UserIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M5 20c1.5-4 12.5-4 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function EyeIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M2.5 12S5.8 5.5 12 5.5 21.5 12 21.5 12 18.2 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M10.6 5.7A9.4 9.4 0 0 1 12 5.5c6.2 0 9.5 6.5 9.5 6.5a14 14 0 0 1-3 3.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M6.4 6.8C3.9 8.5 2.5 12 2.5 12S5.8 18.5 12 18.5a9.5 9.5 0 0 0 4.1-.9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   )
 }
