@@ -279,8 +279,8 @@ export default function FaturamentoPage() {
       >
         <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
           <MenuItem clean={clean} titulo="Dashboard" icone="▦" onClick={() => router.push('/dashboard')} />
-          <MenuItem clean={clean} titulo="Faturamento" ativo icone="📄" onClick={() => router.push('/faturamento')} />
           <MenuItem clean={clean} titulo="Ordens" icone="📅" onClick={() => router.push('/ordens')} />
+          <MenuItem clean={clean} titulo="Faturamento" ativo icone="📄" onClick={() => router.push('/faturamento')} />
           <MenuItem clean={clean} titulo="Config." icone="⚙️" onClick={() => router.push('/configuracao')} />
         </div>
       </nav>
