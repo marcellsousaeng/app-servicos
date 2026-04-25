@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../lib/supabase'
@@ -10,7 +10,9 @@ import {
   Eye, 
   EyeOff, 
   LogIn, 
-  ShieldCheck 
+  ShieldCheck,
+  Moon,
+  Sun
 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -20,15 +22,26 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [carregando, setCarregando] = useState(false)
+  
+  // Lógica de Tema
+  const [tema, setTema] = useState<'dark' | 'clean'>('dark')
+
+  useEffect(() => {
+    const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
+    if (temaSalvo) setTema(temaSalvo)
+  }, [])
+
+  const alternarTema = (novoTema: 'dark' | 'clean') => {
+    setTema(novoTema)
+    localStorage.setItem('tema-app', novoTema)
+  }
 
   async function fazerLogin() {
     if (!usuario || !senha) {
       alert('Preencha usuário e senha')
       return
     }
-
     setCarregando(true)
-
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')
@@ -41,13 +54,31 @@ export default function LoginPage() {
       setCarregando(false)
       return
     }
-
     localStorage.setItem('usuario', data.usuario)
     router.push('/dashboard')
   }
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-white flex flex-col items-center justify-center px-4 py-8">
+    <div className={`min-h-screen flex flex-col items-center justify-center px-4 py-8 transition-colors duration-500 ${
+      tema === 'dark' ? 'bg-[#07111f]' : 'bg-[#f8fafc]'
+    }`}>
+      
+      {/* BOTÃO DE TEMA (MODERNO) */}
+      <div className="absolute top-6 right-6 flex bg-slate-800/10 p-1 rounded-xl border border-slate-700/20 backdrop-blur-sm">
+        <button 
+          onClick={() => alternarTema('dark')}
+          className={`p-2 rounded-lg transition-all ${tema === 'dark' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-400'}`}
+        >
+          <Moon size={18} />
+        </button>
+        <button 
+          onClick={() => alternarTema('clean')}
+          className={`p-2 rounded-lg transition-all ${tema === 'clean' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-600'}`}
+        >
+          <Sun size={18} />
+        </button>
+      </div>
+
       <div className="w-full max-w-md">
         
         {/* LOGO AREA */}
@@ -57,61 +88,70 @@ export default function LoginPage() {
               src="/logo-divisa.png"
               alt="Logo Divisa"
               fill
-              className="object-contain"
+              className={`object-contain transition-all ${tema === 'clean' ? 'brightness-0 opacity-80' : ''}`}
               priority
             />
           </div>
         </div>
 
         {/* LOGIN CARD */}
-        <div className="bg-[#0d1726] border border-slate-700/50 rounded-[40px] p-8 shadow-2xl">
+        <div className={`border rounded-[40px] p-8 shadow-2xl transition-all duration-500 ${
+          tema === 'dark' 
+            ? 'bg-[#0d1726] border-slate-700/50 text-white' 
+            : 'bg-white border-slate-200 text-slate-900'
+        }`}>
           <div className="flex items-start gap-4 mb-10">
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 text-white">
               <Lock size={28} strokeWidth={2.5} />
             </div>
 
             <div>
               <h1 className="text-2xl font-black uppercase italic tracking-tighter">Sistema de Serviços</h1>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
+              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${tema === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
                 Autenticação de Acesso
               </p>
             </div>
           </div>
 
-          {/* INPUT USUÁRIO */}
-          <div className="mb-5">
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-2 tracking-widest">Usuário</label>
-            <div className="bg-[#111c2e] border border-slate-700/50 rounded-2xl px-4 py-4 flex items-center gap-3 focus-within:border-blue-500 transition-all">
-              <User size={20} className="text-blue-500" />
-              <input
-                type="text"
-                value={usuario}
-                onChange={(e) => setUsuario(e.target.value)}
-                placeholder="Digite seu usuário"
-                className="bg-transparent outline-none w-full text-sm font-bold text-white placeholder:text-slate-600 uppercase"
-              />
+          {/* INPUTS */}
+          <div className="space-y-5 mb-8">
+            <div>
+              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-2 tracking-widest">Usuário</label>
+              <div className={`border rounded-2xl px-4 py-4 flex items-center gap-3 focus-within:border-blue-500 transition-all ${
+                tema === 'dark' ? 'bg-[#111c2e] border-slate-700/50' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <User size={20} className="text-blue-500" />
+                <input
+                  type="text"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  placeholder="Digite seu usuário"
+                  className={`bg-transparent outline-none w-full text-sm font-bold uppercase placeholder:text-slate-600 ${
+                    tema === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* INPUT SENHA */}
-          <div className="mb-8">
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-2 tracking-widest">Senha</label>
-            <div className="bg-[#111c2e] border border-slate-700/50 rounded-2xl px-4 py-4 flex items-center gap-3 focus-within:border-blue-500 transition-all">
-              <Lock size={20} className="text-blue-500" />
-              <input
-                type={mostrarSenha ? 'text' : 'password'}
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="Digite sua senha"
-                className="bg-transparent outline-none w-full text-sm font-bold text-white placeholder:text-slate-600"
-              />
-              <button
-                type="button"
-                onClick={() => setMostrarSenha(!mostrarSenha)}
-                className="text-slate-500 hover:text-blue-400 transition"
-              >
-                {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+            <div>
+              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-2 tracking-widest">Senha</label>
+              <div className={`border rounded-2xl px-4 py-4 flex items-center gap-3 focus-within:border-blue-500 transition-all ${
+                tema === 'dark' ? 'bg-[#111c2e] border-slate-700/50' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <Lock size={20} className="text-blue-500" />
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder="Digite sua senha"
+                  className={`bg-transparent outline-none w-full text-sm font-bold placeholder:text-slate-600 ${
+                    tema === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}
+                />
+                <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="text-slate-500">
+                  {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -119,16 +159,9 @@ export default function LoginPage() {
           <button
             onClick={fazerLogin}
             disabled={carregando}
-            className="w-full bg-blue-600 hover:bg-blue-700 transition-all py-5 rounded-2xl font-black uppercase tracking-widest text-xs text-white shadow-xl shadow-blue-600/20 disabled:opacity-60 flex items-center justify-center gap-2 active:scale-95"
+            className="w-full bg-blue-600 hover:bg-blue-700 transition-all py-5 rounded-2xl font-black uppercase tracking-widest text-xs text-white shadow-xl shadow-blue-600/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
           >
-            {carregando ? (
-              'Processando...'
-            ) : (
-              <>
-                <LogIn size={18} />
-                Entrar no Sistema
-              </>
-            )}
+            {carregando ? 'Processando...' : <><LogIn size={18} /> Entrar no Sistema</>}
           </button>
 
           <div className="flex items-center gap-3 my-8 opacity-20">
@@ -137,13 +170,12 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-slate-500" />
           </div>
 
-          {/* BOTÃO ESQUECI SENHA */}
           <button
             type="button"
-            className="w-full border border-slate-700/50 rounded-2xl py-4 text-[10px] font-black uppercase tracking-widest text-blue-500 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2"
-            onClick={() =>
-              alert('Procure o administrador do sistema para redefinir sua senha.')
-            }
+            className={`w-full border rounded-2xl py-4 text-[10px] font-black uppercase tracking-widest text-blue-500 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 ${
+              tema === 'dark' ? 'border-slate-700/50' : 'border-slate-200'
+            }`}
+            onClick={() => alert('Procure o administrador.')}
           >
             <ShieldCheck size={14} />
             Esqueci minha senha
