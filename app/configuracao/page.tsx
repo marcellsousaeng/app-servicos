@@ -2,16 +2,31 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+// Importando ícones modernos do Lucide
+import { 
+  ArrowLeft, 
+  Moon, 
+  Sun, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  LayoutGrid, 
+  ClipboardList, 
+  CircleDollarSign, 
+  Settings,
+  Info,
+  CheckCircle2
+} from 'lucide-react'
 
 function MenuItem({
   titulo,
-  icone,
+  Icone,
   ativo = false,
   clean,
   onClick,
 }: {
   titulo: string
-  icone: string
+  Icone: any
   ativo?: boolean
   clean: boolean
   onClick: () => void
@@ -19,244 +34,188 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className={`rounded-2xl py-3 flex flex-col items-center justify-center text-sm transition-all ${
-        ativo
-          ? clean
-            ? 'bg-blue-600 text-white'
-            : 'bg-blue-600 text-white'
-          : clean
-          ? 'text-slate-600 hover:bg-slate-100'
-          : 'text-slate-300 hover:bg-slate-800'
+      className={`flex flex-col items-center justify-center py-2 transition-all ${
+        ativo ? 'text-blue-500' : clean ? 'text-slate-400' : 'text-slate-500'
       }`}
     >
-      <span className="text-lg">{icone}</span>
-      <span className="mt-1 text-xs">{titulo}</span>
+      <Icone size={24} strokeWidth={ativo ? 2.5 : 2} />
+      <span className="mt-1 text-[10px] font-medium">{titulo}</span>
     </button>
   )
 }
 
 export default function ConfiguracaoPage() {
   const router = useRouter()
-
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
+  const [verSenha, setVerSenha] = useState({ atual: false, nova: false, confirmar: false })
+  
   const clean = tema === 'clean'
-
-  const [senhaAtual, setSenhaAtual] = useState('')
-  const [novaSenha, setNovaSenha] = useState('')
-  const [confirmarSenha, setConfirmarSenha] = useState('')
 
   useEffect(() => {
     const temaSalvo = localStorage.getItem('tema-app')
-
-    if (temaSalvo === 'clean') {
-      setTema('clean')
-    } else {
-      setTema('dark')
-    }
+    if (temaSalvo === 'clean') setTema('clean')
   }, [])
 
-  function alterarTema(novoTema: 'dark' | 'clean') {
+  const alterarTema = (novoTema: 'dark' | 'clean') => {
     setTema(novoTema)
     localStorage.setItem('tema-app', novoTema)
   }
 
-  function alterarSenha() {
-    if (!senhaAtual || !novaSenha || !confirmarSenha) {
-      alert('Preencha todos os campos')
-      return
-    }
-
-    if (novaSenha !== confirmarSenha) {
-      alert('As senhas não conferem')
-      return
-    }
-
-    alert('Senha alterada com sucesso!')
-
-    setSenhaAtual('')
-    setNovaSenha('')
-    setConfirmarSenha('')
-  }
-
   return (
-    <div
-      className={`min-h-screen pb-32 ${
-        clean
-          ? 'bg-slate-100 text-slate-900'
-          : 'bg-[#07111f] text-white'
-      }`}
-    >
-      <div className="max-w-md mx-auto px-5 py-6">
-        {/* TOPO */}
-        <div className="flex items-start gap-4 mb-8">
+    <div className={`min-h-screen pb-32 transition-colors duration-300 ${
+      clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'
+    }`}>
+      <main className="max-w-md mx-auto px-5 pt-6">
+        
+        {/* CABEÇALHO */}
+        <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => router.push('/dashboard')}
-            className={`w-14 h-14 rounded-2xl border flex items-center justify-center text-xl ${
-              clean
-                ? 'bg-white border-slate-200'
-                : 'bg-[#0d1a2d] border-slate-700'
+            className={`w-12 h-12 rounded-xl border flex items-center justify-center ${
+              clean ? 'bg-white border-slate-200 text-slate-600' : 'bg-[#0d1a2d] border-slate-800 text-white'
             }`}
           >
-            ←
+            <ArrowLeft size={20} />
           </button>
-
           <div>
-            <h1 className="text-4xl font-bold">Configuração</h1>
-            <p
-              className={`text-lg ${
-                clean ? 'text-slate-500' : 'text-slate-400'
-              }`}
-            >
+            <h1 className="text-2xl font-bold">Configuração</h1>
+            <p className={`text-sm ${clean ? 'text-slate-500' : 'text-slate-400'}`}>
               Ajuste sua conta e aparência
             </p>
           </div>
         </div>
 
-        {/* APARÊNCIA */}
-        <div
-          className={`rounded-3xl p-6 mb-6 shadow-lg ${
-            clean
-              ? 'bg-white border border-slate-200'
-              : 'bg-[#0b1628] border border-slate-800'
-          }`}
-        >
-          <h2 className="text-2xl font-bold mb-6">
-            Aparência do aplicativo
-          </h2>
-
+        {/* SEÇÃO: APARÊNCIA */}
+        <section className={`rounded-3xl p-6 mb-6 ${clean ? 'bg-white shadow-sm' : 'bg-[#0b1628]'}`}>
+          <h2 className="text-lg font-semibold mb-5">Aparência do aplicativo</h2>
           <div className="grid grid-cols-2 gap-4">
-            <button
+            <ThemeCard 
+              active={tema === 'dark'} 
+              label="Dark" 
+              sub="Tema escuro" 
+              Icon={Moon} 
               onClick={() => alterarTema('dark')}
-              className={`rounded-3xl p-6 text-left border transition-all ${
-                tema === 'dark'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : clean
-                  ? 'bg-slate-100 border-slate-200'
-                  : 'bg-[#111f35] border-slate-700'
-              }`}
-            >
-              <h3 className="text-xl font-bold">Modo Dark</h3>
-              <p className="text-sm opacity-80">
-                Tema escuro atual
-              </p>
-            </button>
-
-            <button
+              clean={clean}
+            />
+            <ThemeCard 
+              active={tema === 'clean'} 
+              label="Clean" 
+              sub="Tema claro" 
+              Icon={Sun} 
               onClick={() => alterarTema('clean')}
-              className={`rounded-3xl p-6 text-left border transition-all ${
-                tema === 'clean'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : clean
-                  ? 'bg-slate-100 border-slate-200'
-                  : 'bg-[#111f35] border-slate-700'
-              }`}
-            >
-              <h3 className="text-xl font-bold">Modo Clean</h3>
-              <p className="text-sm opacity-80">
-                Tema claro
-              </p>
-            </button>
+              clean={clean}
+            />
           </div>
-        </div>
+        </section>
 
-        {/* SENHA */}
-        <div
-          className={`rounded-3xl p-6 shadow-lg ${
-            clean
-              ? 'bg-white border border-slate-200'
-              : 'bg-[#0b1628] border border-slate-800'
-          }`}
-        >
-          <h2 className="text-2xl font-bold mb-6">
-            Alterar senha
-          </h2>
+        {/* SEÇÃO: ALTERAR SENHA */}
+        <section className={`rounded-3xl p-6 ${clean ? 'bg-white shadow-sm' : 'bg-[#0b1628]'}`}>
+          <div className="flex items-center gap-3 mb-6">
+            <Lock size={20} className="text-blue-500" />
+            <h2 className="text-lg font-semibold">Alterar senha</h2>
+          </div>
 
           <div className="space-y-4">
-            <input
-              type="password"
-              placeholder="Senha atual"
-              value={senhaAtual}
-              onChange={(e) => setSenhaAtual(e.target.value)}
-              className={`w-full rounded-2xl px-5 py-5 text-lg border outline-none ${
-                clean
-                  ? 'bg-slate-50 border-slate-200'
-                  : 'bg-[#101d31] border-slate-700'
-              }`}
+            <InputSenha 
+              placeholder="Senha atual" 
+              visible={verSenha.atual} 
+              toggleVisible={() => setVerSenha({...verSenha, atual: !verSenha.atual})}
+              clean={clean}
+            />
+            <InputSenha 
+              placeholder="Nova senha" 
+              visible={verSenha.nova} 
+              toggleVisible={() => setVerSenha({...verSenha, nova: !verSenha.nova})}
+              clean={clean}
+            />
+            <InputSenha 
+              placeholder="Confirmar nova senha" 
+              visible={verSenha.confirmar} 
+              toggleVisible={() => setVerSenha({...verSenha, confirmar: !verSenha.confirmar})}
+              clean={clean}
             />
 
-            <input
-              type="password"
-              placeholder="Nova senha"
-              value={novaSenha}
-              onChange={(e) => setNovaSenha(e.target.value)}
-              className={`w-full rounded-2xl px-5 py-5 text-lg border outline-none ${
-                clean
-                  ? 'bg-slate-50 border-slate-200'
-                  : 'bg-[#101d31] border-slate-700'
-              }`}
-            />
-
-            <input
-              type="password"
-              placeholder="Confirmar nova senha"
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-              className={`w-full rounded-2xl px-5 py-5 text-lg border outline-none ${
-                clean
-                  ? 'bg-slate-50 border-slate-200'
-                  : 'bg-[#101d31] border-slate-700'
-              }`}
-            />
-
-            <button
-              onClick={alterarSenha}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl py-5 rounded-2xl transition-all"
-            >
+            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl mt-2 transition-all shadow-lg shadow-blue-600/20">
               Alterar senha
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* MENU INFERIOR */}
-      <nav
-        className={`fixed bottom-0 left-0 right-0 z-50 border-t px-3 py-2 ${
-          clean
-            ? 'bg-white/95 border-slate-200 shadow-[0_-8px_25px_rgba(0,0,0,0.08)]'
-            : 'bg-[#0b1423]/95 border-slate-700'
-        }`}
-      >
-        <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
-          <MenuItem
-            clean={clean}
-            titulo="Dashboard"
-            icone="▦"
-            onClick={() => router.push('/dashboard')}
-          />
+          {/* DICAS DE SENHA (O quadro azul da imagem) */}
+          <div className={`mt-6 p-4 rounded-2xl border ${
+            clean ? 'bg-blue-50 border-blue-100' : 'bg-blue-500/5 border-blue-500/20'
+          }`}>
+            <div className="flex gap-3 mb-3 text-blue-500">
+              <Info size={18} />
+              <p className="text-sm font-semibold">Sua senha deve ser:</p>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2 text-xs opacity-80">
+                <CheckCircle2 size={14} className="text-blue-500" /> Apenas números
+              </div>
+              <div className="flex items-center gap-2 text-xs opacity-80">
+                <CheckCircle2 size={14} className="text-blue-500" /> Até 4 dígitos
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
-          <MenuItem
-            clean={clean}
-            titulo="Ordens"
-            icone="📋"
-            onClick={() => router.push('/ordens')}
-          />
-
-          <MenuItem
-            clean={clean}
-            titulo="Faturamento"
-            icone="$"
-            onClick={() => router.push('/faturamento')}
-          />
-
-          <MenuItem
-            clean={clean}
-            ativo
-            titulo="Config."
-            icone="⚙️"
-            onClick={() => router.push('/configuracao')}
-          />
+      {/* MENU INFERIOR FIXO */}
+      <nav className={`fixed bottom-0 left-0 right-0 border-t py-2 z-50 ${
+        clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
+      }`}>
+        <div className="max-w-md mx-auto grid grid-cols-4 px-4">
+          <MenuItem clean={clean} titulo="Dashboard" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
+          <MenuItem clean={clean} titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
+          <MenuItem clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
+          <MenuItem clean={clean} ativo titulo="Config." Icone={Settings} onClick={() => {}} />
         </div>
       </nav>
+    </div>
+  )
+}
+
+// Subcomponente para os Cards de Tema
+function ThemeCard({ active, label, sub, Icon, onClick, clean }: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col p-4 rounded-2xl border text-left transition-all ${
+        active 
+          ? 'border-blue-600 bg-blue-600/5 ring-1 ring-blue-600' 
+          : clean ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-[#111f35]'
+      }`}
+    >
+      <Icon size={20} className={active ? 'text-blue-500' : 'text-slate-400'} />
+      <span className={`mt-3 font-bold text-sm ${active && 'text-blue-500'}`}>{label}</span>
+      <span className="text-[10px] opacity-60">{sub}</span>
+    </button>
+  )
+}
+
+// Subcomponente para Inputs com ícone e olho
+function InputSenha({ placeholder, visible, toggleVisible, clean }: any) {
+  return (
+    <div className="relative group">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500">
+        <Lock size={18} />
+      </div>
+      <input
+        type={visible ? 'text' : 'password'}
+        placeholder={placeholder}
+        className={`w-full pl-12 pr-12 py-4 rounded-xl border outline-none text-sm transition-all ${
+          clean 
+            ? 'bg-slate-50 border-slate-200 focus:border-blue-500' 
+            : 'bg-[#101d31] border-slate-800 focus:border-blue-500'
+        }`}
+      />
+      <button 
+        type="button"
+        onClick={toggleVisible}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-500"
+      >
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
     </div>
   )
 }
