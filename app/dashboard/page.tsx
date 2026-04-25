@@ -3,6 +3,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+// Importação de ícones profissionais
+import { 
+  LogOut, 
+  Plus, 
+  ClipboardList, 
+  CircleDollarSign, 
+  Settings, 
+  RefreshCcw, 
+  Play, 
+  Pause, 
+  CheckCircle2, 
+  XCircle,
+  LayoutGrid,
+  User,
+  ArrowUpRight
+} from 'lucide-react'
 
 type Usuario = {
   nome: string
@@ -23,23 +39,22 @@ type FiltroStatus = 'todas' | 'em_andamento' | 'parado' | 'finalizado'
 
 export default function DashboardPage() {
   const router = useRouter()
-
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null)
   const [ordens, setOrdens] = useState<Ordem[]>([])
-  const [emAndamento, setEmAndamento] = useState(0)
-  const [parado, setParado] = useState(0)
-  const [finalizados, setFinalizados] = useState(0)
-  const [cancelados, setCancelados] = useState(0)
+  const [contadores, setContadores] = useState({ andamento: 0, parado: 0, finalizado: 0, cancelado: 0 })
   const [carregando, setCarregando] = useState(true)
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todas')
+  const [tema, setTema] = useState<'dark' | 'clean'>('dark')
 
   useEffect(() => {
+    // Sincroniza tema
+    const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
+    if (temaSalvo) setTema(temaSalvo)
     carregarDashboard()
   }, [])
 
   async function carregarDashboard() {
     setCarregando(true)
-
     const usuarioSalvo = localStorage.getItem('usuario')
 
     if (!usuarioSalvo) {
@@ -53,396 +68,225 @@ export default function DashboardPage() {
       .eq('usuario', usuarioSalvo)
       .single()
 
-    if (dadosUsuario) {
-      setUsuarioLogado(dadosUsuario)
-    }
+    if (dadosUsuario) setUsuarioLogado(dadosUsuario)
 
-    const { data: dadosOrdens, error } = await supabase
+    const { data: dadosOrdens } = await supabase
       .from('ordens_servico')
       .select('*')
       .order('id', { ascending: false })
 
-    if (error) {
-      alert('Erro ao carregar dashboard')
-      setCarregando(false)
-      return
-    }
-
     const lista = dadosOrdens || []
-
     setOrdens(lista)
-    setEmAndamento(lista.filter((o) => o.status === 'Em andamento').length)
-    setParado(lista.filter((o) => o.status === 'Aguardando material').length)
-    setFinalizados(lista.filter((o) => o.status === 'Finalizado').length)
-    setCancelados(lista.filter((o) => o.status === 'Cancelado').length)
-
+    setContadores({
+      andamento: lista.filter(o => o.status === 'Em andamento').length,
+      parado: lista.filter(o => o.status === 'Aguardando material').length,
+      finalizado: lista.filter(o => o.status === 'Finalizado').length,
+      cancelado: lista.filter(o => o.status === 'Cancelado').length
+    })
     setCarregando(false)
   }
 
-  function sairSistema() {
-    localStorage.removeItem('usuario')
-    router.push('/')
-  }
-
-  const nomeExibicao = usuarioLogado?.nome || 'Usuário'
-  const perfilExibicao = usuarioLogado?.perfil || 'Perfil'
+  const clean = tema === 'clean'
 
   const ordensFiltradas = useMemo(() => {
-    if (filtroStatus === 'em_andamento') {
-      return ordens.filter((o) => o.status === 'Em andamento')
-    }
-
-    if (filtroStatus === 'parado') {
-      return ordens.filter((o) => o.status === 'Aguardando material')
-    }
-
-    if (filtroStatus === 'finalizado') {
-      return ordens.filter((o) => o.status === 'Finalizado')
-    }
-
+    if (filtroStatus === 'em_andamento') return ordens.filter(o => o.status === 'Em andamento')
+    if (filtroStatus === 'parado') return ordens.filter(o => o.status === 'Aguardando material')
+    if (filtroStatus === 'finalizado') return ordens.filter(o => o.status === 'Finalizado')
     return ordens
   }, [ordens, filtroStatus])
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-white pb-28">
-      <main className="max-w-md mx-auto px-4 pt-6">
-        {/* TOPO */}
-        <div className="flex items-start justify-between mb-5">
+    <div className={`min-h-screen pb-32 transition-colors duration-300 ${
+      clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'
+    }`}>
+      <main className="max-w-md mx-auto px-5 pt-6">
+        
+        {/* HEADER */}
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sistema OS</h1>
-            <p className="text-base text-slate-400 mt-1">Dashboard</p>
+            <h1 className="text-3xl font-black tracking-tight italic">SISTEMA OS</h1>
+            <p className={`text-sm font-bold uppercase tracking-widest ${clean ? 'text-slate-400' : 'text-blue-400/60'}`}>
+              Dashboard
+            </p>
           </div>
 
           <button
-            onClick={sairSistema}
-            className="bg-[#0e1828] border border-red-500/40 text-red-400 px-5 py-3 rounded-2xl text-sm font-semibold flex items-center gap-2"
+            onClick={() => { localStorage.removeItem('usuario'); router.push('/') }}
+            className={`p-3 rounded-xl border flex items-center gap-2 transition-all active:scale-95 ${
+              clean ? 'bg-white border-slate-200 text-rose-500 shadow-sm' : 'bg-[#0d1a2d] border-rose-500/30 text-rose-400'
+            }`}
           >
-            ↪ Sair
+            <LogOut size={18} />
+            <span className="text-xs font-bold uppercase">Sair</span>
           </button>
         </div>
 
-        {/* CARD USUÁRIO */}
-        <div className="bg-gradient-to-br from-[#111d31] to-[#173a94] rounded-3xl p-5 mb-4 shadow-xl border border-blue-500/40">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-2xl font-bold leading-tight">
-                Olá, {nomeExibicao}!
+        {/* CARD PERFIL & ATALHOS */}
+        <div className={`rounded-3xl p-6 mb-6 shadow-2xl border transition-all ${
+          clean 
+            ? 'bg-white border-slate-100' 
+            : 'bg-gradient-to-br from-[#111d31] to-[#0a1220] border-blue-500/20'
+        }`}>
+          <div className="flex items-center justify-between mb-8">
+            <div className="min-w-0">
+              <p className={`text-sm font-medium ${clean ? 'text-slate-500' : 'text-blue-300'}`}>Bem-vindo de volta,</p>
+              <p className="text-2xl font-black truncate">{usuarioLogado?.nome || 'Usuário'}</p>
+              <p className={`text-xs mt-1 font-bold uppercase tracking-tighter opacity-60`}>
+                {usuarioLogado?.perfil || 'Acesso Padrão'}
               </p>
-              <p className="text-base text-slate-300 mt-2">{perfilExibicao}</p>
             </div>
-
-            <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-3xl shadow-lg">
-              👤
+            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30">
+              <User size={28} strokeWidth={2.5} />
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3 mt-6">
-            <AtalhoAzul
-              titulo="Nova OS"
-              icone="+"
-              onClick={() => router.push('/nova-os')}
-            />
-
-            <Atalho
-              titulo="Ordens"
-              icone="📋"
-              onClick={() => router.push('/ordens')}
-            />
-
-            <Atalho
-              titulo="Faturamento"
-              icone="$"
-              onClick={() => router.push('/faturamento')}
-            />
-
-            <Atalho
-              titulo="Configuração"
-              icone="⚙️"
-              onClick={() => router.push('/configuracao')}
-            />
+          <div className="grid grid-cols-4 gap-3">
+            <Atalho clean={clean} destaque titulo="Nova OS" Icone={Plus} onClick={() => router.push('/nova-os')} />
+            <Atalho clean={clean} titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
+            <Atalho clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
+            <Atalho clean={clean} titulo="Config." Icone={Settings} onClick={() => router.push('/configuracao')} />
           </div>
         </div>
 
-        {/* CARDS RESUMO */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <CardResumo
-            titulo="Em andamento"
-            valor={emAndamento}
-            subtitulo="Ordens ativas"
-            icone="⟳"
-            cor="blue"
-            onClick={() => setFiltroStatus('em_andamento')}
+        {/* INDICADORES */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <CardMini 
+            clean={clean} titulo="Ativas" valor={contadores.andamento} 
+            Icone={Play} cor="blue" onClick={() => setFiltroStatus('em_andamento')} 
           />
-
-          <CardResumo
-            titulo="Parado"
-            valor={parado}
-            subtitulo="Ordens"
-            icone="Ⅱ"
-            cor="purple"
-            onClick={() => setFiltroStatus('parado')}
+          <CardMini 
+            clean={clean} titulo="Paradas" valor={contadores.parado} 
+            Icone={Pause} cor="amber" onClick={() => setFiltroStatus('parado')} 
           />
-
-          <CardResumo
-            titulo="Finalizados"
-            valor={finalizados}
-            subtitulo="Este mês"
-            icone="✓"
-            cor="green"
-            onClick={() => setFiltroStatus('finalizado')}
+          <CardMini 
+            clean={clean} titulo="Finalizadas" valor={contadores.finalizado} 
+            Icone={CheckCircle2} cor="emerald" onClick={() => setFiltroStatus('finalizado')} 
           />
-
-          <CardResumo
-            titulo="Cancelados"
-            valor={cancelados}
-            subtitulo="Este mês"
-            icone="×"
-            cor="red"
-            onClick={() => setFiltroStatus('todas')}
+          <CardMini 
+            clean={clean} titulo="Canceladas" valor={contadores.cancelado} 
+            Icone={XCircle} cor="rose" onClick={() => setFiltroStatus('todas')} 
           />
         </div>
 
-        {/* ÚLTIMAS ORDENS */}
-        <section className="bg-[#0d1726] rounded-3xl p-5 border border-slate-700/70 shadow-xl relative">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-bold">Últimas Ordens de Serviço</h2>
-
-            <button
-              onClick={() => router.push('/ordens')}
-              className="text-blue-400 text-sm font-medium"
-            >
-              Ver todas →
+        {/* LISTAGEM RÁPIDA */}
+        <section className={`rounded-3xl border shadow-xl overflow-hidden ${
+          clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'
+        }`}>
+          <div className="p-5 flex items-center justify-between border-b border-slate-500/10">
+            <h2 className="font-black text-lg uppercase tracking-tight">Recentes</h2>
+            <button onClick={() => router.push('/ordens')} className="text-blue-500 text-xs font-bold uppercase flex items-center gap-1">
+              Ver tudo <ArrowUpRight size={14} />
             </button>
           </div>
 
-          {carregando ? (
-            <p className="text-slate-400 text-center py-10">Carregando...</p>
-          ) : ordensFiltradas.length === 0 ? (
-            <div className="text-center py-10">
-              <div className="w-16 h-16 mx-auto rounded-full border border-dashed border-slate-500 flex items-center justify-center text-3xl mb-3">
-                📄
-              </div>
-              <p className="font-semibold text-slate-300">
-                Nenhuma ordem encontrada
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Ajuste os filtros ou crie uma nova OS
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {ordensFiltradas.slice(0, 4).map((ordem) => (
-                <div
-                  key={ordem.id}
+          <div className="p-4 space-y-3">
+            {carregando ? (
+              <div className="py-10 text-center animate-pulse text-slate-500">Sincronizando...</div>
+            ) : ordensFiltradas.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 text-sm italic">Nenhum registro encontrado.</div>
+            ) : (
+              ordensFiltradas.slice(0, 3).map((ordem) => (
+                <div 
+                  key={ordem.id} 
                   onClick={() => router.push(`/ordens/${ordem.id}`)}
-                  className="bg-[#111c2e] border border-slate-700/70 rounded-2xl p-4 active:scale-[0.98] transition"
+                  className={`p-4 rounded-2xl border transition-all active:scale-[0.98] ${
+                    clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold">OS #{ordem.numero_os ?? '-'}</p>
-                    <span className={badgeStatus(ordem.status)}>
-                      {ordem.status === 'Aguardando material'
-                        ? 'Parado'
-                        : ordem.status}
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-black text-blue-500">#{ordem.numero_os ?? ordem.id}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
+                      ordem.status === 'Finalizado' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      {ordem.status}
                     </span>
                   </div>
-
-                  <p className="text-sm text-slate-300">
-                    Cliente: {ordem.cliente}
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Máquina: {ordem.maquina}
-                  </p>
+                  <p className="text-sm font-bold truncate">{ordem.cliente}</p>
+                  <p className="text-xs opacity-50 truncate">{ordem.maquina}</p>
                 </div>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => setFiltroStatus('todas')}
-            className="absolute right-5 bottom-5 w-14 h-14 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-2xl"
+              ))
+            )}
+          </div>
+          
+          <button 
+            onClick={carregarDashboard}
+            className={`w-full py-4 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ${
+              clean ? 'bg-slate-50 text-slate-400' : 'bg-[#111c2e]/50 text-slate-500'
+            }`}
           >
-            ⟳
+            <RefreshCcw size={12} /> Atualizar dados
           </button>
         </section>
       </main>
 
-      {/* MENU INFERIOR */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#0b1423]/95 backdrop-blur border-t border-slate-700 px-3 py-2">
-        <div className="max-w-md mx-auto grid grid-cols-4 gap-2">
-          <MenuItem
-            ativo
-            titulo="Dashboard"
-            icone="▦"
-            onClick={() => router.push('/dashboard')}
-          />
-
-          <MenuItem
-            titulo="Ordens"
-            icone="📋"
-            onClick={() => router.push('/ordens')}
-          />
-
-          <MenuItem
-            titulo="Faturamento"
-            icone="$"
-            onClick={() => router.push('/faturamento')}
-          />
-
-          <MenuItem
-            titulo="Config."
-            icone="⚙️"
-            onClick={() => router.push('/configuracao')}
-          />
+      {/* MENU INFERIOR PADRONIZADO */}
+      <nav className={`fixed bottom-0 left-0 right-0 border-t py-2 z-50 transition-colors ${
+        clean ? 'bg-white border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]' : 'bg-[#07111f] border-slate-800'
+      }`}>
+        <div className="max-w-md mx-auto grid grid-cols-4 px-4">
+          <MenuItem ativo titulo="Início" Icone={LayoutGrid} clean={clean} onClick={() => {}} />
+          <MenuItem titulo="Ordens" Icone={ClipboardList} clean={clean} onClick={() => router.push('/ordens')} />
+          <MenuItem titulo="Faturam." Icone={CircleDollarSign} clean={clean} onClick={() => router.push('/faturamento')} />
+          <MenuItem titulo="Config." Icone={Settings} clean={clean} onClick={() => router.push('/configuracao')} />
         </div>
       </nav>
     </div>
   )
 }
 
-function Atalho({
-  titulo,
-  icone,
-  onClick,
-}: {
-  titulo: string
-  icone: string
-  onClick: () => void
-}) {
+/* COMPONENTES DE APOIO */
+
+function Atalho({ titulo, Icone, onClick, destaque, clean }: any) {
   return (
     <button
       onClick={onClick}
-      className="h-24 bg-[#121c2c] border border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95"
-    >
-      <div className="text-2xl text-blue-300">{icone}</div>
-      <p className="text-[12px] text-slate-200 text-center leading-tight">
-        {titulo}
-      </p>
-    </button>
-  )
-}
-
-function AtalhoAzul({
-  titulo,
-  icone,
-  onClick,
-}: {
-  titulo: string
-  icone: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="h-24 bg-blue-600 border border-blue-400/40 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 shadow-lg"
-    >
-      <div className="text-5xl leading-none">{icone}</div>
-      <p className="text-[12px] text-white text-center leading-tight">
-        {titulo}
-      </p>
-    </button>
-  )
-}
-
-function CardResumo({
-  titulo,
-  valor,
-  subtitulo,
-  icone,
-  cor,
-  onClick,
-}: {
-  titulo: string
-  valor: number
-  subtitulo: string
-  icone: string
-  cor: 'blue' | 'purple' | 'green' | 'red'
-  onClick: () => void
-}) {
-  const cores = {
-    blue: {
-      texto: 'text-blue-400',
-      fundo: 'bg-blue-500/10',
-      borda: 'border-blue-500/20',
-    },
-    purple: {
-      texto: 'text-purple-400',
-      fundo: 'bg-purple-500/10',
-      borda: 'border-purple-500/20',
-    },
-    green: {
-      texto: 'text-green-400',
-      fundo: 'bg-green-500/10',
-      borda: 'border-green-500/20',
-    },
-    red: {
-      texto: 'text-red-400',
-      fundo: 'bg-red-500/10',
-      borda: 'border-red-500/20',
-    },
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      className="bg-[#0d1726] rounded-2xl p-4 border border-slate-700/70 text-left shadow-lg active:scale-[0.98]"
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <p className={`text-sm font-medium ${cores[cor].texto}`}>{titulo}</p>
-          <p className="text-4xl font-bold mt-4">{valor}</p>
-          <p className="text-xs text-slate-500 mt-2">{subtitulo}</p>
-        </div>
-
-        <div
-          className={`w-12 h-12 rounded-full flex items-center justify-center border text-xl ${cores[cor].texto} ${cores[cor].fundo} ${cores[cor].borda}`}
-        >
-          {icone}
-        </div>
-      </div>
-    </button>
-  )
-}
-
-function MenuItem({
-  titulo,
-  icone,
-  ativo,
-  onClick,
-}: {
-  titulo: string
-  icone: string
-  ativo?: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`py-2 rounded-2xl text-xs flex flex-col items-center justify-center gap-1 ${
-        ativo ? 'bg-blue-600/25 text-blue-400' : 'text-slate-400'
+      className={`h-22 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-90 border ${
+        destaque 
+          ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-600/20' 
+          : clean 
+            ? 'bg-slate-50 border-slate-100 text-slate-600' 
+            : 'bg-[#121c2c] border-slate-700 text-slate-300'
       }`}
     >
-      <span className="text-xl">{icone}</span>
-      <span>{titulo}</span>
+      <Icone size={destaque ? 28 : 22} strokeWidth={destaque ? 3 : 2} />
+      <span className="text-[10px] font-bold uppercase tracking-tighter">{titulo}</span>
     </button>
   )
 }
 
-function badgeStatus(status: string) {
-  if (status === 'Em andamento') {
-    return 'px-3 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400'
+function CardMini({ titulo, valor, Icone, cor, clean, onClick }: any) {
+  const cores: any = {
+    blue: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+    amber: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    emerald: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+    rose: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
   }
 
-  if (status === 'Finalizado') {
-    return 'px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400'
-  }
+  return (
+    <button
+      onClick={onClick}
+      className={`p-4 rounded-3xl border text-left transition-all active:scale-95 ${
+        clean ? 'bg-white border-slate-100 shadow-sm' : 'bg-[#0d1726] border-slate-800'
+      }`}
+    >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 border ${cores[cor]}`}>
+        <Icone size={16} strokeWidth={2.5} />
+      </div>
+      <p className="text-2xl font-black">{valor}</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{titulo}</p>
+    </button>
+  )
+}
 
-  if (status === 'Cancelado') {
-    return 'px-3 py-1 rounded-full text-xs bg-red-500/20 text-red-400'
-  }
-
-  if (status === 'Aguardando material') {
-    return 'px-3 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-400'
-  }
-
-  return 'px-3 py-1 rounded-full text-xs bg-slate-500/20 text-slate-300'
+function MenuItem({ titulo, Icone, ativo, clean, onClick }: any) {
+  return (
+    <button onClick={onClick} className={`flex flex-col items-center justify-center py-2 transition-colors ${
+      ativo ? 'text-blue-500' : clean ? 'text-slate-400' : 'text-slate-500'
+    }`}>
+      <Icone size={22} strokeWidth={ativo ? 3 : 2} />
+      <span className={`mt-1 text-[10px] font-bold uppercase tracking-tighter ${ativo ? 'opacity-100' : 'opacity-60'}`}>
+        {titulo}
+      </span>
+    </button>
+  )
 }
