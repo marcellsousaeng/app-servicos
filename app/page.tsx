@@ -23,7 +23,6 @@ export default function LoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [carregando, setCarregando] = useState(false)
   
-  // Lógica de Tema
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
 
   useEffect(() => {
@@ -41,19 +40,30 @@ export default function LoginPage() {
       alert('Preencha usuário e senha')
       return
     }
+
     setCarregando(true)
+
+    // Ajuste: .trim() remove espaços e garante que a busca no Supabase ignore erros de digitação
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('usuario', usuario)
-      .eq('senha', senha)
-      .single()
+      .eq('usuario', usuario.trim())
+      .eq('senha', senha.trim())
+      .maybeSingle() // Ajuste: maybeSingle resolve o erro 406 do console
 
-    if (error || !data) {
-      alert('Usuário ou senha inválidos')
+    if (error) {
+      console.error("Erro Supabase:", error.message)
+      alert('Erro na conexão: ' + error.message)
       setCarregando(false)
       return
     }
+
+    if (!data) {
+      alert('Usuário ou senha inválidos. Verifique se o Caps Lock está ativado.')
+      setCarregando(false)
+      return
+    }
+
     localStorage.setItem('usuario', data.usuario)
     router.push('/dashboard')
   }
@@ -63,7 +73,7 @@ export default function LoginPage() {
       tema === 'dark' ? 'bg-[#07111f]' : 'bg-[#f8fafc]'
     }`}>
       
-      {/* BOTÃO DE TEMA (MODERNO) */}
+      {/* BOTÃO DE TEMA */}
       <div className="absolute top-6 right-6 flex bg-slate-800/10 p-1 rounded-xl border border-slate-700/20 backdrop-blur-sm">
         <button 
           onClick={() => alternarTema('dark')}
@@ -113,8 +123,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* INPUTS */}
           <div className="space-y-5 mb-8">
+            {/* INPUT USUÁRIO - Agora força o estado para Maiúsculo */}
             <div>
               <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-2 tracking-widest">Usuário</label>
               <div className={`border rounded-2xl px-4 py-4 flex items-center gap-3 focus-within:border-blue-500 transition-all ${
@@ -124,8 +134,8 @@ export default function LoginPage() {
                 <input
                   type="text"
                   value={usuario}
-                  onChange={(e) => setUsuario(e.target.value)}
-                  placeholder="Digite seu usuário"
+                  onChange={(e) => setUsuario(e.target.value.toUpperCase())}
+                  placeholder="DIGITE SEU USUÁRIO"
                   className={`bg-transparent outline-none w-full text-sm font-bold uppercase placeholder:text-slate-600 ${
                     tema === 'dark' ? 'text-white' : 'text-slate-900'
                   }`}
@@ -133,6 +143,7 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* INPUT SENHA - Agora força o estado para Maiúsculo */}
             <div>
               <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-2 tracking-widest">Senha</label>
               <div className={`border rounded-2xl px-4 py-4 flex items-center gap-3 focus-within:border-blue-500 transition-all ${
@@ -142,9 +153,9 @@ export default function LoginPage() {
                 <input
                   type={mostrarSenha ? 'text' : 'password'}
                   value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder="Digite sua senha"
-                  className={`bg-transparent outline-none w-full text-sm font-bold placeholder:text-slate-600 ${
+                  onChange={(e) => setSenha(e.target.value.toUpperCase())}
+                  placeholder="DIGITE SUA SENHA"
+                  className={`bg-transparent outline-none w-full text-sm font-bold uppercase placeholder:text-slate-600 ${
                     tema === 'dark' ? 'text-white' : 'text-slate-900'
                   }`}
                 />
@@ -155,7 +166,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* BOTÃO ENTRAR */}
           <button
             onClick={fazerLogin}
             disabled={carregando}
