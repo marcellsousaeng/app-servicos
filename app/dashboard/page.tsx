@@ -47,7 +47,6 @@ export default function DashboardPage() {
     const pendentes = JSON.parse(localStorage.getItem('os_pendentes') || '[]')
     
     if (pendentes.length > 0 && navigator.onLine) {
-      // Removemos IDs temporários e campos formatados para o Supabase
       const dadosParaEnviar = pendentes.map(({ numero_os, id, ...resto }: any) => resto)
       
       const { error } = await supabase.from('ordens_servico').insert(dadosParaEnviar)
@@ -69,7 +68,6 @@ export default function DashboardPage() {
       return
     }
 
-    // Busca dados do usuário
     const { data: dadosUsuario } = await supabase
       .from('usuarios')
       .select('nome, perfil, usuario')
@@ -78,7 +76,6 @@ export default function DashboardPage() {
 
     if (dadosUsuario) setUsuarioLogado(dadosUsuario)
 
-    // Busca Ordens de Serviço
     const { data: dadosOrdens } = await supabase
       .from('ordens_servico')
       .select('*')
@@ -186,13 +183,27 @@ export default function DashboardPage() {
               <div className="py-10 text-center text-slate-400 text-sm italic">Nenhum registro encontrado.</div>
             ) : (
               ordensFiltradas.slice(0, 3).map((ordem) => (
-                <div key={ordem.id} className={`p-4 rounded-2xl border ${clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'}`}>
+                <div 
+                  key={ordem.id} 
+                  onClick={() => router.push(`/ordens/${ordem.id}`)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] hover:border-blue-500/50 ${
+                    clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'
+                  }`}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-black text-blue-500">#{ordem.numero_os ?? ordem.id}</span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase bg-blue-500/10 text-blue-500`}>{ordem.status}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
+                      ordem.status === 'Finalizado' 
+                        ? 'bg-emerald-500/10 text-emerald-500' 
+                        : 'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      {ordem.status}
+                    </span>
                   </div>
-                  <p className="text-sm font-bold truncate">{ordem.cliente}</p>
-                  <p className="text-xs opacity-50 truncate">{ordem.maquina}</p>
+                  <p className="text-sm font-bold truncate uppercase">{ordem.cliente}</p>
+                  <p className="text-xs opacity-50 truncate uppercase">
+                    {ordem.maquina || ordem.equipamento || 'NÃO IDENTIFICADO'}
+                  </p>
                 </div>
               ))
             )}
