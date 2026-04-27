@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-// Importação dos ícones modernos
 import { 
   ArrowLeft, 
   Plus, 
@@ -13,7 +12,8 @@ import {
   CircleDollarSign, 
   Settings,
   ChevronRight,
-  FileText
+  FileText,
+  Search // Importado para o ícone de busca
 } from 'lucide-react'
 
 type OrdemServico = {
@@ -31,9 +31,11 @@ export default function OrdensPage() {
   const [ordens, setOrdens] = useState<OrdemServico[]>([])
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
+  
+  // ESTADO PARA A BUSCA
+  const [busca, setBusca] = useState('')
 
   useEffect(() => {
-    // Sincroniza o tema com o localStorage
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
     if (temaSalvo) setTema(temaSalvo)
     carregarOrdens()
@@ -49,6 +51,17 @@ export default function OrdensPage() {
     if (!error) setOrdens(data || [])
     setCarregando(false)
   }
+
+  // LÓGICA DE FILTRO EM TEMPO REAL
+  const ordensFiltradas = ordens.filter(ordem => {
+    const termo = busca.toLowerCase()
+    return (
+      ordem.cliente?.toLowerCase().includes(termo) ||
+      ordem.solicitante?.toLowerCase().includes(termo) ||
+      ordem.maquina?.toLowerCase().includes(termo) ||
+      ordem.numero_os?.toString().includes(termo)
+    )
+  })
 
   const clean = tema === 'clean'
 
@@ -85,7 +98,25 @@ export default function OrdensPage() {
           </button>
         </div>
 
-        {/* CONTAINER PRINCIPAL (CARD DE FUNDO) */}
+        {/* BARRA DE PESQUISA */}
+        <div className="mb-6 relative">
+          <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${clean ? 'text-slate-400' : 'text-slate-500'}`}>
+            <Search size={18} />
+          </div>
+          <input
+            type="text"
+            placeholder="Pesquisar cliente, máquina ou OS..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className={`w-full py-4 pl-12 pr-4 rounded-2xl border outline-none transition-all font-medium text-sm ${
+              clean 
+                ? 'bg-white border-slate-200 focus:border-blue-500 shadow-sm' 
+                : 'bg-[#0d1726] border-slate-800 focus:border-blue-500 text-white'
+            }`}
+          />
+        </div>
+
+        {/* CONTAINER PRINCIPAL */}
         <section className={`rounded-3xl border shadow-sm overflow-hidden ${
           clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800/50'
         }`}>
@@ -112,10 +143,12 @@ export default function OrdensPage() {
           <div className="p-4 space-y-4">
             {carregando ? (
               <div className="py-10 text-center animate-pulse text-slate-500">Carregando...</div>
-            ) : ordens.length === 0 ? (
-              <div className="py-10 text-center text-slate-500 text-sm">Nenhuma ordem encontrada</div>
+            ) : ordensFiltradas.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm">
+                {busca ? 'Nenhum resultado para sua busca' : 'Nenhuma ordem encontrada'}
+              </div>
             ) : (
-              ordens.map((ordem) => (
+              ordensFiltradas.map((ordem) => (
                 <button
                   key={ordem.id}
                   onClick={() => router.push(`/ordens/${ordem.id}`)}
@@ -158,7 +191,7 @@ export default function OrdensPage() {
             clean ? 'bg-slate-50/50 border-slate-100 text-slate-500' : 'bg-[#111c2e]/30 border-slate-800 text-slate-400'
           }`}>
             <FileText size={14} />
-            Total de ordens: {ordens.length}
+            {busca ? `Encontradas: ${ordensFiltradas.length}` : `Total de ordens: ${ordens.length}`}
           </div>
         </section>
       </main>
@@ -178,6 +211,7 @@ export default function OrdensPage() {
   )
 }
 
+// Sub-componentes permanecem iguais
 function InfoLinha({ titulo, texto, clean }: any) {
   return (
     <div className="flex items-center justify-between gap-3">
