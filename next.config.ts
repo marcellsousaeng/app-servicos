@@ -7,13 +7,9 @@ const withPWA = withPWAInit({
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === "development",
-  workboxOptions: {
-    disableDevLogs: true,
-  },
 });
 
 const nextConfig: NextConfig = {
-  /* Suas outras configurações (se houver) ficam aqui */
   reactStrictMode: true,
 };
 
