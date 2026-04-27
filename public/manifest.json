@@ -1,7 +1,7 @@
 {
   "name": "Divisa Tornearia - Sistema OS",
   "short_name": "Divisa OS",
-  "description": "Sistema de Gestão de Ordens de Serviço",
+  "description": "Gestão de Ordens de Serviço Offline",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07111f",

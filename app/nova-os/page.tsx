@@ -14,11 +14,10 @@ import {
   ClipboardList,
   DollarSign,
   Settings,
-  ChevronRight,
-  Wrench 
+  ChevronRight 
 } from 'lucide-react'
 
-// Definição de Tipos para os Componentes
+// Interfaces de Tipagem
 interface CampoProps {
   icone: React.ReactNode;
   label: string;
@@ -52,19 +51,24 @@ export default function NovaOSPage() {
     if (temaSalvo) setTema(temaSalvo)
   }, [])
 
+  // Função para buscar número sequencial (Apenas se houver internet)
   async function buscarProximoNumeroOS() {
-    const { data, error } = await supabase
-      .from('ordens_servico')
-      .select('numero_os')
-      .order('numero_os', { ascending: false })
-      .limit(1)
+    try {
+      const { data, error } = await supabase
+        .from('ordens_servico')
+        .select('numero_os')
+        .order('numero_os', { ascending: false })
+        .limit(1)
 
-    if (error || !data || data.length === 0 || !data[0].numero_os) return 1
-    return data[0].numero_os + 1
+      if (error || !data || data.length === 0) return Date.now() 
+      return (data[0].numero_os || 0) + 1
+    } catch {
+      return Date.now() // Fallback para ID temporal se falhar a rede
+    }
   }
 
   async function enviarFoto() {
-    if (!foto) return null
+    if (!foto || !navigator.onLine) return null
     const nomeArquivo = `${Date.now()}-${foto.name}`
     const { error } = await supabase.storage.from('os-imagens').upload(nomeArquivo, foto)
     if (error) return null
@@ -78,36 +82,63 @@ export default function NovaOSPage() {
       return
     }
 
-    try {
-      setSalvando(true)
-      const usuarioResponsavel = localStorage.getItem('usuario')
+    setSalvando(true)
+    const usuarioResponsavel = localStorage.getItem('usuario')
 
-      if (!usuarioResponsavel) {
-        router.push('/')
-        return
+    if (!usuarioResponsavel) {
+      router.push('/')
+      return
+    }
+
+    // Criamos o objeto base da OS
+    const novaOS = {
+      cliente: cliente.toUpperCase(),
+      solicitante: solicitante.toUpperCase(),
+      maquina: maquina.toUpperCase(),
+      descricao,
+      status: 'Em andamento',
+      cancelada: false,
+      usuario_responsavel: usuarioResponsavel,
+      data_entrada: new Date().toISOString()
+    }
+
+    try {
+      if (navigator.onLine) {
+        // --- FLUXO ONLINE ---
+        const numeroOS = await buscarProximoNumeroOS()
+        const fotoUrl = await enviarFoto()
+
+        const { error } = await supabase.from('ordens_servico').insert([{
+          ...novaOS,
+          numero_os: numeroOS,
+          foto_url: fotoUrl
+        }])
+
+        if (error) throw error
+
+        alert('✅ OS criada com sucesso no servidor!')
+      } else {
+        // --- FLUXO OFFLINE (CATCH FORÇADO) ---
+        throw new Error('Offline')
       }
 
-      const numeroOS = await buscarProximoNumeroOS()
-      const fotoUrl = await enviarFoto()
-
-      const { error } = await supabase.from('ordens_servico').insert([{
-        numero_os: numeroOS,
-        cliente: cliente.toUpperCase(),
-        solicitante: solicitante.toUpperCase(),
-        maquina: maquina.toUpperCase(),
-        descricao,
-        status: 'Em andamento',
-        cancelada: false,
-        usuario_responsavel: usuarioResponsavel,
-        foto_url: fotoUrl,
-      }])
-
-      if (error) throw error
-
-      alert('OS criada com sucesso!')
       router.push('/dashboard')
     } catch (error) {
-      alert('Erro ao salvar OS')
+      // --- MODO OFFLINE / ERRO DE CONEXÃO ---
+      const pendentes = JSON.parse(localStorage.getItem('os_pendentes') || '[]')
+      
+      const osOffline = {
+        ...novaOS,
+        numero_os: Date.now(), // ID temporário
+        foto_url: null // Fotos geralmente não são salvas offline no LocalStorage por limite de espaço
+      }
+
+      pendentes.push(osOffline)
+      localStorage.setItem('os_pendentes', JSON.stringify(pendentes))
+
+      alert('⚠️ Sem internet! A OS foi salva localmente e será enviada quando você voltar ao Dashboard com sinal.')
+      router.push('/dashboard')
+    } finally {
       setSalvando(false)
     }
   }
@@ -118,8 +149,6 @@ export default function NovaOSPage() {
     }`}>
       
       <main className="max-w-md mx-auto px-4 pt-8">
-        
-        {/* CABEÇALHO */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-black uppercase italic tracking-tighter">Nova OS</h1>
@@ -135,7 +164,6 @@ export default function NovaOSPage() {
           </button>
         </div>
 
-        {/* CARD PRINCIPAL */}
         <section className={`border rounded-[40px] p-6 shadow-2xl transition-all ${
           tema === 'dark' ? 'bg-[#0d1726] border-slate-700/50' : 'bg-white border-slate-200'
         }`}>
@@ -168,7 +196,6 @@ export default function NovaOSPage() {
               tema={tema}
             />
 
-            {/* ÁREA DE TEXTO */}
             <div className={`rounded-3xl p-4 border transition-all ${
               tema === 'dark' ? 'bg-[#111c2e] border-slate-700/50' : 'bg-slate-50 border-slate-200'
             }`}>
@@ -184,7 +211,6 @@ export default function NovaOSPage() {
               </div>
             </div>
 
-            {/* BOTÃO DE FOTO ESTILIZADO */}
             <label className={`flex items-center justify-between p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${
               tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
             }`}>
@@ -195,7 +221,7 @@ export default function NovaOSPage() {
                 <div>
                   <p className="text-xs font-black uppercase tracking-tight">Anexar Foto</p>
                   <p className="text-[10px] text-slate-500 uppercase font-bold truncate max-w-[150px]">
-                    {foto ? foto.name : 'Opcional'}
+                    {foto ? foto.name : 'Opcional (Somente Online)'}
                   </p>
                 </div>
               </div>
@@ -209,7 +235,6 @@ export default function NovaOSPage() {
               />
             </label>
 
-            {/* AÇÕES */}
             <div className="pt-4 space-y-3">
               <button
                 onClick={salvarOS}
@@ -232,7 +257,6 @@ export default function NovaOSPage() {
         </section>
       </main>
 
-      {/* MENU INFERIOR MODERNO */}
       <nav className={`fixed bottom-0 left-0 right-0 border-t backdrop-blur-md px-6 py-4 z-50 ${
         tema === 'dark' ? 'bg-[#07111f]/90 border-slate-800' : 'bg-white/90 border-slate-200'
       }`}>
@@ -247,7 +271,6 @@ export default function NovaOSPage() {
   )
 }
 
-// COMPONENTES AUXILIARES COM TIPAGEM CORRETA
 function CampoModerno({ icone, label, placeholder, value, onChange, tema }: CampoProps) {
   return (
     <div className={`rounded-3xl px-4 py-3 border transition-all focus-within:border-blue-500 ${
