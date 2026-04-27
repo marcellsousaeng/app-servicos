@@ -178,8 +178,9 @@ export default function DetalhesOSPage() {
   const clean = tema === 'clean'
   const encerrada = ordem?.status === 'Finalizado' || ordem?.status === 'Cancelado'
   
-  // ALTERAÇÃO AQUI: Condição para exibir faturamento se NÃO for cancelado
-  const exibirFaturamento = ordem && ordem.status !== 'Cancelado'
+  // LÓGICA ATUALIZADA: Exibe faturamento se a OS não for "Nova" e não estiver "Cancelada"
+  // Isso inclui explicitamente: 'Em andamento', 'Aguardando material' e 'Finalizado'
+  const exibirFaturamento = ordem && ordem.status !== 'Cancelado' && ordem.status !== 'Nova'
 
   if (carregando) return (
     <div className={`min-h-screen flex items-center justify-center font-bold ${clean ? 'bg-slate-50 text-slate-400' : 'bg-[#07111f] text-blue-500'}`}>
@@ -318,13 +319,13 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* DADOS DE FATURAMENTO - VISÍVEL EM 'EM ANDAMENTO' E 'FINALIZADO' */}
+        {/* DADOS DE FATURAMENTO - AGORA VISÍVEL EM 'EM ANDAMENTO' */}
         {exibirFaturamento && (
           <section className={`rounded-3xl p-6 mb-8 border shadow-lg transition-all duration-500 ${
             ordem.status === 'Finalizado' 
               ? 'border-emerald-500/40 bg-emerald-500/5' 
               : 'border-blue-500/40 bg-blue-500/5'
-          } ${clean ? 'bg-white' : ''}`}>
+          } ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
             <div className="flex items-center gap-2 mb-6">
               <CircleDollarSign size={20} className={ordem.status === 'Finalizado' ? 'text-emerald-500' : 'text-blue-500'} />
               <h2 className="font-black uppercase tracking-tighter">Dados de Faturamento</h2>
@@ -340,8 +341,8 @@ export default function DetalhesOSPage() {
                   placeholder="Ex: 4500987"
                   className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${
                     clean 
-                      ? 'bg-slate-50 border-slate-200 focus:border-blue-500' 
-                      : 'bg-[#111c2e] border-slate-700 focus:border-blue-500'
+                      ? 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900' 
+                      : 'bg-[#111c2e] border-slate-700 focus:border-blue-500 text-white'
                   }`} 
                 />
               </div>
@@ -355,8 +356,8 @@ export default function DetalhesOSPage() {
                   placeholder="Ex: OS-2024-001"
                   className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${
                     clean 
-                      ? 'bg-slate-50 border-slate-200 focus:border-blue-500' 
-                      : 'bg-[#111c2e] border-slate-700 focus:border-blue-500'
+                      ? 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900' 
+                      : 'bg-[#111c2e] border-slate-700 focus:border-blue-500 text-white'
                   }`} 
                 />
               </div>
