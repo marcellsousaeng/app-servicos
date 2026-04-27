@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { 
   LogOut, Plus, ClipboardList, CircleDollarSign, Settings, 
-  RefreshCcw, Play, Pause, CheckCircle2, XCircle,
+  Play, Pause, CheckCircle2, XCircle,
   LayoutGrid, User, ArrowUpRight, Wifi, WifiOff 
 } from 'lucide-react'
 
@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const [ordens, setOrdens] = useState<any[]>([])
   const [contadores, setContadores] = useState({ andamento: 0, parado: 0, finalizado: 0, cancelado: 0 })
   const [carregando, setCarregando] = useState(true)
-  const [filtroStatus, setFiltroStatus] = useState<any>('todas')
+  const [filtroStatus, setFiltroStatus] = useState<string>('todas')
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
   const [isOnline, setIsOnline] = useState(true)
 
@@ -23,7 +23,7 @@ export default function DashboardPage() {
     // Monitoramento de conexão
     setIsOnline(navigator.onLine)
 
-    const temaSalvo = localStorage.getItem('tema-app') as any
+    const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
     if (temaSalvo) setTema(temaSalvo)
     
     carregarDashboard()
@@ -47,8 +47,8 @@ export default function DashboardPage() {
     const pendentes = JSON.parse(localStorage.getItem('os_pendentes') || '[]')
     
     if (pendentes.length > 0 && navigator.onLine) {
-      // Removemos IDs temporários antes de enviar
-      const dadosParaEnviar = pendentes.map(({ numero_os, ...resto }: any) => resto)
+      // Removemos IDs temporários e campos formatados para o Supabase
+      const dadosParaEnviar = pendentes.map(({ numero_os, id, ...resto }: any) => resto)
       
       const { error } = await supabase.from('ordens_servico').insert(dadosParaEnviar)
       
@@ -69,6 +69,7 @@ export default function DashboardPage() {
       return
     }
 
+    // Busca dados do usuário
     const { data: dadosUsuario } = await supabase
       .from('usuarios')
       .select('nome, perfil, usuario')
@@ -77,13 +78,15 @@ export default function DashboardPage() {
 
     if (dadosUsuario) setUsuarioLogado(dadosUsuario)
 
+    // Busca Ordens de Serviço
     const { data: dadosOrdens } = await supabase
       .from('ordens_servico')
       .select('*')
-      .order('id', { ascending: false })
+      .order('created_at', { ascending: false })
 
     const lista = dadosOrdens || []
     setOrdens(lista)
+    
     setContadores({
       andamento: lista.filter(o => o.status === 'Em andamento').length,
       parado: lista.filter(o => o.status === 'Aguardando material').length,
@@ -108,11 +111,11 @@ export default function DashboardPage() {
     }`}>
       <main className="max-w-md mx-auto px-5 pt-6">
         
-        {/* HEADER COM STATUS */}
+        {/* HEADER */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-3xl font-black tracking-tight italic text-white">SISTEMA OS</h1>
+              <h1 className={`text-3xl font-black tracking-tight italic ${clean ? 'text-slate-800' : 'text-white'}`}>SISTEMA OS</h1>
               {isOnline ? (
                 <Wifi size={18} className="text-emerald-500" />
               ) : (
@@ -134,7 +137,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* PERFIL */}
+        {/* PERFIL E ATALHOS */}
         <div className={`rounded-3xl p-6 mb-6 shadow-2xl border ${
           clean ? 'bg-white border-slate-100' : 'bg-gradient-to-br from-[#111d31] to-[#0a1220] border-blue-500/20'
         }`}>
@@ -142,7 +145,7 @@ export default function DashboardPage() {
             <div className="min-w-0">
               <p className={`text-sm font-medium ${clean ? 'text-slate-500' : 'text-blue-300'}`}>Bem-vindo,</p>
               <p className="text-2xl font-black truncate">{usuarioLogado?.nome || 'Usuário'}</p>
-              <p className="text-xs font-bold uppercase opacity-60">{usuarioLogado?.perfil || 'Carregando...'}</p>
+              <p className="text-xs font-bold uppercase opacity-60">{usuarioLogado?.perfil || 'Acessando...'}</p>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30">
               <User size={28} strokeWidth={2.5} />
@@ -186,7 +189,7 @@ export default function DashboardPage() {
                 <div key={ordem.id} className={`p-4 rounded-2xl border ${clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-black text-blue-500">#{ordem.numero_os ?? ordem.id}</span>
-                    <span className="text-[10px] font-bold px-2 py-1 rounded-md uppercase bg-blue-500/10 text-blue-500">{ordem.status}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase bg-blue-500/10 text-blue-500`}>{ordem.status}</span>
                   </div>
                   <p className="text-sm font-bold truncate">{ordem.cliente}</p>
                   <p className="text-xs opacity-50 truncate">{ordem.maquina}</p>
@@ -212,7 +215,7 @@ export default function DashboardPage() {
   )
 }
 
-/* COMPONENTES DE APOIO (Resolvendo erros do VS Code) */
+/* COMPONENTES DE APOIO INTERNOS */
 
 function Atalho({ titulo, Icone, onClick, destaque, clean }: any) {
   return (
@@ -226,7 +229,7 @@ function Atalho({ titulo, Icone, onClick, destaque, clean }: any) {
 }
 
 function CardMini({ titulo, valor, Icone, cor, clean, onClick }: any) {
-  const cores: any = {
+  const cores: Record<string, string> = {
     blue: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
     amber: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
     emerald: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
@@ -236,7 +239,7 @@ function CardMini({ titulo, valor, Icone, cor, clean, onClick }: any) {
     <button onClick={onClick} className={`p-4 rounded-3xl border text-left transition-all active:scale-95 ${
       clean ? 'bg-white border-slate-100 shadow-sm' : 'bg-[#0d1726] border-slate-800'
     }`}>
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 border ${cores[cor]}`}>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 border ${cores[cor] || cores.blue}`}>
         <Icone size={16} strokeWidth={2.5} />
       </div>
       <p className="text-2xl font-black">{valor}</p>
