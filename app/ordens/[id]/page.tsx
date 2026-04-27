@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import { 
   ChevronLeft, Plus, ClipboardList, User, Monitor, 
   FileText, Camera, Search, Users, LayoutGrid, 
-  CircleDollarSign, Settings, X, Layers, CheckCircle2, XCircle, Loader2
+  CircleDollarSign, Settings, X, Layers, CheckCircle2, XCircle, Loader2, FolderOpen
 } from 'lucide-react'
 
 // Interfaces
@@ -64,14 +64,12 @@ export default function DetalhesOSPage() {
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
   
-  // Estados para novas atualizações
   const [descricaoAtualizacao, setDescricaoAtualizacao] = useState('')
   const [tecnicosResponsaveis, setTecnicosResponsaveis] = useState('')
   const [salvandoAtualizacao, setSalvandoAtualizacao] = useState(false)
   const [modalAtualizacao, setModalAtualizacao] = useState(false)
   const [enviandoFoto, setEnviandoFoto] = useState(false)
 
-  // Estados para faturamento (Pós-finalização)
   const [numPedido, setNumPedido] = useState('')
   const [numOSFaturam, setNumOSFaturam] = useState('')
   const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
@@ -84,7 +82,6 @@ export default function DetalhesOSPage() {
 
   async function carregarDados() {
     const id = Number(id_os)
-    
     const { data: osData } = await supabase.from('ordens_servico').select('*').eq('id', id).single()
     if (!osData) return setCarregando(false)
     
@@ -134,7 +131,6 @@ export default function DetalhesOSPage() {
   async function salvarAtualizacao() {
     if (!ordem || !descricaoAtualizacao.trim()) return
     setSalvandoAtualizacao(true)
-
     const usuarioSalvo = localStorage.getItem('usuario')
     const { data: user } = await supabase.from('usuarios').select('nome').eq('usuario', usuarioSalvo).single()
     
@@ -155,12 +151,10 @@ export default function DetalhesOSPage() {
   async function alterarStatus(novoStatus: string) {
     if (!ordem) return
     if (!confirm(`Deseja alterar o status para ${novoStatus}?`)) return
-
     const { error } = await supabase.from('ordens_servico').update({ 
       status: novoStatus, 
       cancelada: novoStatus === 'Cancelado'
     }).eq('id', ordem.id)
-    
     if (!error) carregarDados()
   }
 
@@ -225,19 +219,30 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* GALERIA DE FOTOS */}
+        {/* GALERIA DE FOTOS COM 02 OPÇÕES */}
         <section className={`rounded-3xl p-6 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col gap-4 mb-4">
             <div className="flex items-center gap-2">
               <Camera size={20} className="text-blue-500" />
               <h2 className="font-black uppercase tracking-tighter">Fotos do Registro</h2>
             </div>
+            
             {!encerrada && (
-              <label className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl cursor-pointer active:scale-95 transition-all shadow-md">
-                {enviandoFoto ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                <span className="text-[10px] font-black uppercase">Tirar Foto</span>
-                <input type="file" multiple hidden accept="image/*" capture="environment" onChange={handleAddFoto} disabled={enviandoFoto} />
-              </label>
+              <div className="flex gap-2">
+                {/* BOTÃO 1: CÂMERA */}
+                <label className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-3 rounded-xl cursor-pointer active:scale-95 transition-all shadow-md">
+                  {enviandoFoto ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                  <span className="text-[10px] font-black uppercase">Câmera</span>
+                  <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddFoto} disabled={enviandoFoto} />
+                </label>
+
+                {/* BOTÃO 2: GALERIA/FICHEIRO */}
+                <label className={`flex-1 flex items-center justify-center gap-2 border px-3 py-3 rounded-xl cursor-pointer active:scale-95 transition-all shadow-sm ${clean ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-700/50 border-slate-600 text-slate-200'}`}>
+                  <FolderOpen size={16} />
+                  <span className="text-[10px] font-black uppercase">Ficheiro</span>
+                  <input type="file" multiple hidden accept="image/*" onChange={handleAddFoto} disabled={enviandoFoto} />
+                </label>
+              </div>
             )}
           </div>
 
@@ -292,7 +297,7 @@ export default function DetalhesOSPage() {
           )}
         </div>
 
-        {/* HISTÓRICO DE MÃO DE OBRA */}
+        {/* MÃO DE OBRA */}
         <section className={`rounded-3xl p-6 mb-8 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
           <div className="flex items-center gap-2 mb-6 border-b border-slate-500/10 pb-4">
             <FileText size={20} className="text-purple-500" />
@@ -312,7 +317,7 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* DADOS DE FATURAMENTO (PÓS-FINALIZAÇÃO) */}
+        {/* DADOS DE FATURAMENTO */}
         {ordem.status === 'Finalizado' && (
           <section className={`rounded-3xl p-6 mb-8 border shadow-lg border-emerald-500/20 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
             <div className="flex items-center gap-2 mb-6">
@@ -338,7 +343,6 @@ export default function DetalhesOSPage() {
           </section>
         )}
 
-        {/* BOTÕES DE AÇÃO DE STATUS */}
         {!encerrada && (
           <div className="grid grid-cols-2 gap-4 mb-10">
             <button onClick={() => alterarStatus('Cancelado')} className="flex flex-col items-center justify-center p-5 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-500 active:scale-95 transition-all">
