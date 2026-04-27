@@ -3,12 +3,15 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
+  // Esta linha é crucial: ela força o cache de arquivos estáticos e páginas
+  cacheOnFrontEndNav: true, 
+  reloadOnOnline: true,
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    turbo: {}, // Mantém para silenciar o erro do Turbopack
+    turbo: {},
   },
 };
 
