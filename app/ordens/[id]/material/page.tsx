@@ -5,6 +5,16 @@ import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Save, Layers, CircleDot, PipetteIcon as Pipe } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 
+// Interfaces para corrigir os erros do VS Code
+interface DadosMaterial {
+  descricao: string
+  espessura: string
+  diametro: string
+  comprimento: string
+  largura: string
+  quantidade: string
+}
+
 export default function AdicionarMaterialPage() {
   const router = useRouter()
   const params = useParams()
@@ -14,7 +24,7 @@ export default function AdicionarMaterialPage() {
   const [loading, setLoading] = useState(false)
   const [tema, setTema] = useState<'dark' | 'clean'>('clean')
 
-  const [dados, setDados] = useState({
+  const [dados, setDados] = useState<DadosMaterial>({
     descricao: '',
     espessura: '',
     diametro: '',
@@ -23,33 +33,52 @@ export default function AdicionarMaterialPage() {
     quantidade: '1'
   })
 
-  // Carrega o tema da configuração
   useEffect(() => {
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean'
     if (temaSalvo) setTema(temaSalvo)
   }, [])
 
   async function salvarMaterial() {
+    if (!tipo) return alert('Selecione um tipo de material')
+    
     setLoading(true)
     
+    // Convertendo id_os para Number para ser compatível com int8
     const novoMaterial = {
-      id_os: id_os,
+      id_os: Number(id_os), 
       tipo,
-      ...dados,
+      descricao: dados.descricao || `${tipo.toUpperCase()} adicionada`,
+      espessura: dados.espessura,
+      diametro: dados.diametro,
+      comprimento: dados.comprimento,
+      largura: dados.largura,
+      quantidade: dados.quantidade,
       created_at: new Date().toISOString()
     }
 
-    const { error } = await supabase.from('materiais_os').insert([novoMaterial])
+    try {
+      const { error } = await supabase.from('materiais_os').insert([novoMaterial])
 
-    if (error) {
-      console.error(error)
-      const pendentes = JSON.parse(localStorage.getItem('materiais_pendentes') || '[]')
-      localStorage.setItem('materiais_pendentes', JSON.stringify([...pendentes, novoMaterial]))
-      alert('Salvo localmente (modo offline)')
+      if (error) {
+        // Se for erro de estrutura (400/42804), mostramos o erro real
+        console.error('Erro Supabase:', error)
+        
+        if (error.code === '42804' || error.code === 'P0001') {
+          alert('Erro de compatibilidade no banco. Verifique os tipos de ID.')
+        } else {
+          // Fallback para offline apenas em falhas de conexão
+          const pendentes = JSON.parse(localStorage.getItem('materiais_pendentes') || '[]')
+          localStorage.setItem('materiais_pendentes', JSON.stringify([...pendentes, novoMaterial]))
+          alert('Modo Offline: Salvo localmente.')
+        }
+      } else {
+        router.back()
+      }
+    } catch (err) {
+      console.error('Erro crítico:', err)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
-    router.back()
   }
 
   const clean = tema === 'clean'
@@ -78,21 +107,20 @@ export default function AdicionarMaterialPage() {
 
         {tipo && (
           <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-            {/* Opcional: Removido campo de descrição se não for usar, ou mantido apenas como input geral */}
             <div className="grid grid-cols-2 gap-4">
               {tipo === 'chapa' && (
                 <>
-                  <InputGeral clean={clean} label="Espessura (mm)" placeholder="0.00" value={dados.espessura} onChange={(v: string) => setDados({...dados, espessura: v})} />
-                  <InputGeral clean={clean} label="Largura (mm)" placeholder="0.00" value={dados.largura} onChange={(v: string) => setDados({...dados, largura: v})} />
+                  <InputGeral clean={clean} label="Espessura (mm)" placeholder="0.00" value={dados.espessura} onChange={(v) => setDados({...dados, espessura: v})} />
+                  <InputGeral clean={clean} label="Largura (mm)" placeholder="0.00" value={dados.largura} onChange={(v) => setDados({...dados, largura: v})} />
                 </>
               )}
 
               {(tipo === 'eixo' || tipo === 'tubo') && (
-                <InputGeral clean={clean} label="Diâmetro (mm)" placeholder="Ø 0.00" value={dados.diametro} onChange={(v: string) => setDados({...dados, diametro: v})} />
+                <InputGeral clean={clean} label="Diâmetro (mm)" placeholder="Ø 0.00" value={dados.diametro} onChange={(v) => setDados({...dados, diametro: v})} />
               )}
 
-              <InputGeral clean={clean} label="Comprimento (mm)" placeholder="0.00" value={dados.comprimento} onChange={(v: string) => setDados({...dados, comprimento: v})} />
-              <InputGeral clean={clean} label="Qtd" type="number" value={dados.quantidade} onChange={(v: string) => setDados({...dados, quantidade: v})} />
+              <InputGeral clean={clean} label="Comprimento (mm)" placeholder="0.00" value={dados.comprimento} onChange={(v) => setDados({...dados, comprimento: v})} />
+              <InputGeral clean={clean} label="Qtd" type="number" value={dados.quantidade} onChange={(v) => setDados({...dados, quantidade: v})} />
             </div>
 
             <button
@@ -110,7 +138,8 @@ export default function AdicionarMaterialPage() {
   )
 }
 
-function BotaoTipo({ ativo, onClick, label, Icone, clean }: any) {
+// Componentes auxiliares com tipagem explícita
+function BotaoTipo({ ativo, onClick, label, Icone, clean }: { ativo: boolean, onClick: () => void, label: string, Icone: any, clean: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -128,7 +157,7 @@ function BotaoTipo({ ativo, onClick, label, Icone, clean }: any) {
   )
 }
 
-function InputGeral({ label, placeholder, value, onChange, type = "text", clean }: any) {
+function InputGeral({ label, placeholder, value, onChange, type = "text", clean }: { label: string, placeholder?: string, value: string, onChange: (v: string) => void, type?: string, clean: boolean }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className={`text-[10px] font-bold uppercase ml-1 ${clean ? 'text-slate-400' : 'opacity-40'}`}>{label}</label>
