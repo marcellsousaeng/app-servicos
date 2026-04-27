@@ -177,6 +177,9 @@ export default function DetalhesOSPage() {
 
   const clean = tema === 'clean'
   const encerrada = ordem?.status === 'Finalizado' || ordem?.status === 'Cancelado'
+  
+  // ALTERAÇÃO AQUI: Condição para exibir faturamento se NÃO for cancelado
+  const exibirFaturamento = ordem && ordem.status !== 'Cancelado'
 
   if (carregando) return (
     <div className={`min-h-screen flex items-center justify-center font-bold ${clean ? 'bg-slate-50 text-slate-400' : 'bg-[#07111f] text-blue-500'}`}>
@@ -219,7 +222,7 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* GALERIA DE FOTOS COM 02 OPÇÕES */}
+        {/* GALERIA DE FOTOS */}
         <section className={`rounded-3xl p-6 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
           <div className="flex flex-col gap-4 mb-4">
             <div className="flex items-center gap-2">
@@ -229,14 +232,12 @@ export default function DetalhesOSPage() {
             
             {!encerrada && (
               <div className="flex gap-2">
-                {/* BOTÃO 1: CÂMERA */}
                 <label className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-3 rounded-xl cursor-pointer active:scale-95 transition-all shadow-md">
                   {enviandoFoto ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
                   <span className="text-[10px] font-black uppercase">Câmera</span>
                   <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddFoto} disabled={enviandoFoto} />
                 </label>
 
-                {/* BOTÃO 2: GALERIA/FICHEIRO */}
                 <label className={`flex-1 flex items-center justify-center gap-2 border px-3 py-3 rounded-xl cursor-pointer active:scale-95 transition-all shadow-sm ${clean ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-700/50 border-slate-600 text-slate-200'}`}>
                   <FolderOpen size={16} />
                   <span className="text-[10px] font-black uppercase">Ficheiro</span>
@@ -317,25 +318,56 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* DADOS DE FATURAMENTO */}
-        {ordem.status === 'Finalizado' && (
-          <section className={`rounded-3xl p-6 mb-8 border shadow-lg border-emerald-500/20 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
+        {/* DADOS DE FATURAMENTO - VISÍVEL EM 'EM ANDAMENTO' E 'FINALIZADO' */}
+        {exibirFaturamento && (
+          <section className={`rounded-3xl p-6 mb-8 border shadow-lg transition-all duration-500 ${
+            ordem.status === 'Finalizado' 
+              ? 'border-emerald-500/40 bg-emerald-500/5' 
+              : 'border-blue-500/40 bg-blue-500/5'
+          } ${clean ? 'bg-white' : ''}`}>
             <div className="flex items-center gap-2 mb-6">
-              <CircleDollarSign size={20} className="text-emerald-500" />
+              <CircleDollarSign size={20} className={ordem.status === 'Finalizado' ? 'text-emerald-500' : 'text-blue-500'} />
               <h2 className="font-black uppercase tracking-tighter">Dados de Faturamento</h2>
             </div>
+            
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black uppercase opacity-50 ml-2">Número do Pedido</label>
-                <input type="text" value={numPedido} onChange={(e) => setNumPedido(e.target.value)} placeholder="Ex: 4500987"
-                  className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 focus:border-emerald-500' : 'bg-[#111c2e] border-slate-700 focus:border-emerald-500'}`} />
+                <input 
+                  type="text" 
+                  value={numPedido} 
+                  onChange={(e) => setNumPedido(e.target.value)} 
+                  placeholder="Ex: 4500987"
+                  className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${
+                    clean 
+                      ? 'bg-slate-50 border-slate-200 focus:border-blue-500' 
+                      : 'bg-[#111c2e] border-slate-700 focus:border-blue-500'
+                  }`} 
+                />
               </div>
+              
               <div>
                 <label className="text-[10px] font-black uppercase opacity-50 ml-2">Número da OS (Sistema)</label>
-                <input type="text" value={numOSFaturam} onChange={(e) => setNumOSFaturam(e.target.value)} placeholder="Ex: OS-2024-001"
-                  className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 focus:border-emerald-500' : 'bg-[#111c2e] border-slate-700 focus:border-emerald-500'}`} />
+                <input 
+                  type="text" 
+                  value={numOSFaturam} 
+                  onChange={(e) => setNumOSFaturam(e.target.value)} 
+                  placeholder="Ex: OS-2024-001"
+                  className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${
+                    clean 
+                      ? 'bg-slate-50 border-slate-200 focus:border-blue-500' 
+                      : 'bg-[#111c2e] border-slate-700 focus:border-blue-500'
+                  }`} 
+                />
               </div>
-              <button onClick={salvarDadosFaturamento} disabled={salvandoDadosExtras} className="w-full bg-emerald-500 py-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+
+              <button 
+                onClick={salvarDadosFaturamento} 
+                disabled={salvandoDadosExtras} 
+                className={`w-full py-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 ${
+                  ordem.status === 'Finalizado' ? 'bg-emerald-500' : 'bg-blue-600'
+                }`}
+              >
                 {salvandoDadosExtras ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
                 Salvar Dados Faturamento
               </button>
@@ -418,6 +450,7 @@ function badgeEstilo(status: string) {
   switch (status) {
     case 'Finalizado': return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
     case 'Cancelado': return 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+    case 'Aguardando material': return 'bg-amber-500/10 border-amber-500/20 text-amber-500'
     default: return 'bg-blue-500/10 border-blue-500/20 text-blue-500'
   }
 }
