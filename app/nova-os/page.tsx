@@ -14,8 +14,9 @@ import {
   ClipboardList,
   DollarSign,
   Settings,
-  ChevronRight,
-  Image as ImageIcon // Importado para mostrar contador de fotos
+  FolderOpen,
+  Image as ImageIcon,
+  Trash2
 } from 'lucide-react'
 
 // Interfaces de Tipagem
@@ -43,7 +44,6 @@ export default function NovaOSPage() {
   const [solicitante, setSolicitante] = useState('')
   const [maquina, setMaquina] = useState('')
   const [descricao, setDescricao] = useState('')
-  // Alterado para Array para suportar múltiplas fotos
   const [fotos, setFotos] = useState<File[]>([])
   const [salvando, setSalvando] = useState(false)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
@@ -68,24 +68,30 @@ export default function NovaOSPage() {
     }
   }
 
-  // Nova função para enviar múltiplas fotos e registrar na tabela fotos_os
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const novosArquivos = Array.from(e.target.files)
+      setFotos(prev => [...prev, ...novosArquivos])
+    }
+  }
+
+  const removerFoto = (index: number) => {
+    setFotos(prev => prev.filter((_, i) => i !== index))
+  }
+
   async function enviarMultiplasFotos(idOS: number) {
     if (fotos.length === 0 || !navigator.onLine) return
 
     const promessas = fotos.map(async (arquivo) => {
       const nomeArquivo = `${idOS}/${Date.now()}-${arquivo.name}`
-      
-      // 1. Upload para o bucket os-imagens
       const { error: uploadError } = await supabase.storage
         .from('os-imagens')
         .upload(nomeArquivo, arquivo)
 
       if (uploadError) throw uploadError
 
-      // 2. Pegar URL pública
       const { data } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
       
-      // 3. Inserir na tabela de fotos vinculando à OS
       return supabase.from('fotos_os').insert([{
         id_os: idOS,
         url: data.publicUrl
@@ -123,8 +129,6 @@ export default function NovaOSPage() {
     try {
       if (navigator.onLine) {
         const numeroOS = await buscarProximoNumeroOS()
-
-        // 1. Criar a OS primeiro
         const { data: osCriada, error: osError } = await supabase
           .from('ordens_servico')
           .insert([{ ...novaOS, numero_os: numeroOS }])
@@ -133,7 +137,6 @@ export default function NovaOSPage() {
 
         if (osError) throw osError
 
-        // 2. Enviar fotos usando o ID gerado pelo banco
         if (osCriada) {
           await enviarMultiplasFotos(osCriada.id)
         }
@@ -144,7 +147,6 @@ export default function NovaOSPage() {
       }
       router.push('/dashboard')
     } catch (error) {
-      // MODO OFFLINE
       const pendentes = JSON.parse(localStorage.getItem('os_pendentes') || '[]')
       const osOffline = { ...novaOS, numero_os: Date.now() }
       pendentes.push(osOffline)
@@ -225,33 +227,57 @@ export default function NovaOSPage() {
               </div>
             </div>
 
-            {/* Input de arquivo modificado para múltiplas fotos */}
-            <label className={`flex items-center justify-between p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${
-              tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
-            }`}>
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-colors ${fotos.length > 0 ? 'bg-green-600 shadow-green-600/20' : 'bg-blue-600 shadow-blue-600/20'}`}>
-                  {fotos.length > 0 ? <ImageIcon size={24} /> : <Camera size={24} />}
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-tight">Anexar Fotos</p>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold">
-                    {fotos.length > 0 ? `${fotos.length} foto(s) selecionada(s)` : 'Opcional (Somente Online)'}
-                  </p>
-                </div>
+            {/* SEÇÃO DE FOTOS - 02 OPÇÕES */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase text-slate-500 px-2 tracking-widest">Anexar Registros Visuais</p>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {/* BOTÃO CÂMERA */}
+                <label className={`flex flex-col items-center justify-center p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${
+                  tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
+                }`}>
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-blue-600 text-white shadow-lg mb-2">
+                    <Camera size={20} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-blue-500">Câmera</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+                </label>
+
+                {/* BOTÃO FICHEIRO */}
+                <label className={`flex flex-col items-center justify-center p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${
+                  tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
+                }`}>
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-slate-700 text-white shadow-lg mb-2">
+                    <FolderOpen size={20} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-slate-500">Galeria</span>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                </label>
               </div>
-              <ChevronRight size={20} className="text-slate-600" />
-              <input
-                type="file"
-                accept="image/*"
-                multiple // Permite selecionar várias
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || [])
-                  setFotos(files)
-                }}
-              />
-            </label>
+
+              {/* CONTADOR E LISTA DE FOTOS SELECIONADAS */}
+              {fotos.length > 0 && (
+                <div className={`p-3 rounded-2xl ${tema === 'dark' ? 'bg-slate-800/30' : 'bg-slate-100'}`}>
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <ImageIcon size={14} className="text-green-500" />
+                    <span className="text-[10px] font-black uppercase">{fotos.length} Arquivos selecionados</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {fotos.map((file, idx) => (
+                      <div key={idx} className="relative w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center border border-blue-500/20 group">
+                        <ImageIcon size={16} className="text-blue-500" />
+                        <button 
+                          onClick={() => removerFoto(idx)}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-md"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="pt-4 space-y-3">
               <button
