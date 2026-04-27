@@ -14,7 +14,8 @@ import {
   ClipboardList,
   DollarSign,
   Settings,
-  ChevronRight 
+  ChevronRight,
+  Image as ImageIcon // Importado para mostrar contador de fotos
 } from 'lucide-react'
 
 // Interfaces de Tipagem
@@ -42,7 +43,8 @@ export default function NovaOSPage() {
   const [solicitante, setSolicitante] = useState('')
   const [maquina, setMaquina] = useState('')
   const [descricao, setDescricao] = useState('')
-  const [foto, setFoto] = useState<File | null>(null)
+  // Alterado para Array para suportar múltiplas fotos
+  const [fotos, setFotos] = useState<File[]>([])
   const [salvando, setSalvando] = useState(false)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
 
@@ -51,7 +53,6 @@ export default function NovaOSPage() {
     if (temaSalvo) setTema(temaSalvo)
   }, [])
 
-  // Função para buscar número sequencial (Apenas se houver internet)
   async function buscarProximoNumeroOS() {
     try {
       const { data, error } = await supabase
@@ -60,20 +61,38 @@ export default function NovaOSPage() {
         .order('numero_os', { ascending: false })
         .limit(1)
 
-      if (error || !data || data.length === 0) return Date.now() 
+      if (error || !data || data.length === 0) return 1 
       return (data[0].numero_os || 0) + 1
     } catch {
-      return Date.now() // Fallback para ID temporal se falhar a rede
+      return Math.floor(Date.now() / 1000)
     }
   }
 
-  async function enviarFoto() {
-    if (!foto || !navigator.onLine) return null
-    const nomeArquivo = `${Date.now()}-${foto.name}`
-    const { error } = await supabase.storage.from('os-imagens').upload(nomeArquivo, foto)
-    if (error) return null
-    const { data } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
-    return data.publicUrl
+  // Nova função para enviar múltiplas fotos e registrar na tabela fotos_os
+  async function enviarMultiplasFotos(idOS: number) {
+    if (fotos.length === 0 || !navigator.onLine) return
+
+    const promessas = fotos.map(async (arquivo) => {
+      const nomeArquivo = `${idOS}/${Date.now()}-${arquivo.name}`
+      
+      // 1. Upload para o bucket os-imagens
+      const { error: uploadError } = await supabase.storage
+        .from('os-imagens')
+        .upload(nomeArquivo, arquivo)
+
+      if (uploadError) throw uploadError
+
+      // 2. Pegar URL pública
+      const { data } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
+      
+      // 3. Inserir na tabela de fotos vinculando à OS
+      return supabase.from('fotos_os').insert([{
+        id_os: idOS,
+        url: data.publicUrl
+      }])
+    })
+
+    await Promise.all(promessas)
   }
 
   async function salvarOS() {
@@ -90,7 +109,6 @@ export default function NovaOSPage() {
       return
     }
 
-    // Criamos o objeto base da OS
     const novaOS = {
       cliente: cliente.toUpperCase(),
       solicitante: solicitante.toUpperCase(),
@@ -104,39 +122,35 @@ export default function NovaOSPage() {
 
     try {
       if (navigator.onLine) {
-        // --- FLUXO ONLINE ---
         const numeroOS = await buscarProximoNumeroOS()
-        const fotoUrl = await enviarFoto()
 
-        const { error } = await supabase.from('ordens_servico').insert([{
-          ...novaOS,
-          numero_os: numeroOS,
-          foto_url: fotoUrl
-        }])
+        // 1. Criar a OS primeiro
+        const { data: osCriada, error: osError } = await supabase
+          .from('ordens_servico')
+          .insert([{ ...novaOS, numero_os: numeroOS }])
+          .select()
+          .single()
 
-        if (error) throw error
+        if (osError) throw osError
 
-        alert('✅ OS criada com sucesso no servidor!')
+        // 2. Enviar fotos usando o ID gerado pelo banco
+        if (osCriada) {
+          await enviarMultiplasFotos(osCriada.id)
+        }
+
+        alert('✅ OS e fotos enviadas com sucesso!')
       } else {
-        // --- FLUXO OFFLINE (CATCH FORÇADO) ---
         throw new Error('Offline')
       }
-
       router.push('/dashboard')
     } catch (error) {
-      // --- MODO OFFLINE / ERRO DE CONEXÃO ---
+      // MODO OFFLINE
       const pendentes = JSON.parse(localStorage.getItem('os_pendentes') || '[]')
-      
-      const osOffline = {
-        ...novaOS,
-        numero_os: Date.now(), // ID temporário
-        foto_url: null // Fotos geralmente não são salvas offline no LocalStorage por limite de espaço
-      }
-
+      const osOffline = { ...novaOS, numero_os: Date.now() }
       pendentes.push(osOffline)
       localStorage.setItem('os_pendentes', JSON.stringify(pendentes))
 
-      alert('⚠️ Sem internet! A OS foi salva localmente e será enviada quando você voltar ao Dashboard com sinal.')
+      alert('⚠️ Salvo localmente! Fotos só são enviadas com internet.')
       router.push('/dashboard')
     } finally {
       setSalvando(false)
@@ -211,17 +225,18 @@ export default function NovaOSPage() {
               </div>
             </div>
 
+            {/* Input de arquivo modificado para múltiplas fotos */}
             <label className={`flex items-center justify-between p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${
               tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
             }`}>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-                  <Camera size={24} />
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-colors ${fotos.length > 0 ? 'bg-green-600 shadow-green-600/20' : 'bg-blue-600 shadow-blue-600/20'}`}>
+                  {fotos.length > 0 ? <ImageIcon size={24} /> : <Camera size={24} />}
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-tight">Anexar Foto</p>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold truncate max-w-[150px]">
-                    {foto ? foto.name : 'Opcional (Somente Online)'}
+                  <p className="text-xs font-black uppercase tracking-tight">Anexar Fotos</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">
+                    {fotos.length > 0 ? `${fotos.length} foto(s) selecionada(s)` : 'Opcional (Somente Online)'}
                   </p>
                 </div>
               </div>
@@ -229,9 +244,12 @@ export default function NovaOSPage() {
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
+                multiple // Permite selecionar várias
                 className="hidden"
-                onChange={(e) => setFoto(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  setFotos(files)
+                }}
               />
             </label>
 
@@ -257,6 +275,7 @@ export default function NovaOSPage() {
         </section>
       </main>
 
+      {/* Menu Inferior */}
       <nav className={`fixed bottom-0 left-0 right-0 border-t backdrop-blur-md px-6 py-4 z-50 ${
         tema === 'dark' ? 'bg-[#07111f]/90 border-slate-800' : 'bg-white/90 border-slate-200'
       }`}>
