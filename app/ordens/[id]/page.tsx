@@ -60,7 +60,6 @@ export default function DetalhesOSPage() {
 
   const [ordem, setOrdem] = useState<OrdemServico | null>(null)
   const [fotos, setFotos] = useState<FotoOS[]>([])
-  const [nomeResponsavel, setNomeResponsavel] = useState('-')
   const [atualizacoes, setAtualizacoes] = useState<Atualizacao[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -76,7 +75,7 @@ export default function DetalhesOSPage() {
   const [numOSFaturam, setNumOSFaturam] = useState('')
   const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
 
-  // Estados para Controle de Operação
+  // Estados para Controle de Operação (Andamento e Parada)
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
   const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
   const [motivoParada, setMotivoParada] = useState('')
@@ -110,8 +109,6 @@ export default function DetalhesOSPage() {
     setMotivoParada(osData.motivo_parada || '')
     setTecnicoAtuante(osData.usuario_responsavel || '')
     
-    if (osData.status === 'Parado') setMostrarCampoParada(true)
-
     setEditForm({
       cliente: osData.cliente || '',
       solicitante: osData.solicitante || '',
@@ -134,43 +131,50 @@ export default function DetalhesOSPage() {
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
     
-    // Validação Andamento
+    // Lógica para ANDAMENTO
     if (novoStatus === 'Em andamento') {
         if (!mostrarCampoAndamento && ordem.status !== 'Em andamento') {
-            setMostrarCampoAndamento(true); setMostrarCampoParada(false); return 
+            setMostrarCampoAndamento(true)
+            setMostrarCampoParada(false)
+            return 
         }
-        if (!tecnicoAtuante.trim() && ordem.status !== 'Em andamento') {
-            alert("Informe o técnico que está assumindo."); return
+        if (mostrarCampoAndamento && !tecnicoAtuante.trim()) {
+            alert("Por favor, informe o nome do técnico antes de confirmar.")
+            return
         }
     }
 
-    // Validação Parada
+    // Lógica para PARADA
     if (novoStatus === 'Parado') {
         if (!mostrarCampoParada) {
-            setMostrarCampoParada(true); setMostrarCampoAndamento(false); return 
+            setMostrarCampoParada(true)
+            setMostrarCampoAndamento(false)
+            return 
         }
-        if (!motivoParada.trim()) {
-            alert("Descreva o motivo da parada."); return
+        if (mostrarCampoParada && !motivoParada.trim()) {
+            alert("Por favor, descreva o motivo da parada antes de confirmar.")
+            return
         }
     }
 
     setAtualizandoStatusRapido(true)
     
-    const dadosUpdate: any = { 
-      status: novoStatus,
-      motivo_parada: novoStatus === 'Parado' ? motivoParada : null,
-      usuario_responsavel: novoStatus === 'Em andamento' ? tecnicoAtuante : ordem.usuario_responsavel
-    }
-
-    const { error } = await supabase.from('ordens_servico').update(dadosUpdate).eq('id', ordem.id)
+    const { error } = await supabase
+      .from('ordens_servico')
+      .update({ 
+        status: novoStatus,
+        motivo_parada: novoStatus === 'Parado' ? motivoParada : null,
+        usuario_responsavel: novoStatus === 'Em andamento' ? tecnicoAtuante : ordem.usuario_responsavel
+      })
+      .eq('id', ordem.id)
 
     if (!error) {
-      // Registrar no histórico automático
+      // Grava no histórico de Mão de Obra apenas após a confirmação
       await supabase.from('os_atualizacoes').insert([{
         ordem_servico_id: ordem.id,
         descricao: novoStatus === 'Em andamento' 
-          ? `Status alterado para Em Andamento. Técnico: ${tecnicoAtuante}` 
-          : `Serviço paralisado. Motivo: ${motivoParada}`,
+          ? `INÍCIO DE SERVIÇO: Técnico ${tecnicoAtuante} assumiu a execução.` 
+          : `SERVIÇO PARALISADO: Motivo: ${motivoParada}`,
         usuario_nome: 'SISTEMA'
       }])
 
@@ -305,7 +309,7 @@ export default function DetalhesOSPage() {
             <div className="flex gap-2">
               <button 
                 onClick={() => atualizarStatusExecucao('Em andamento')} 
-                disabled={atualizandoStatusRapido}
+                disabled={atualizandoStatusRapido || (ordem.status === 'Em andamento' && !mostrarCampoAndamento)}
                 className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border transition-all active:scale-95 ${(ordem.status === 'Em andamento' || mostrarCampoAndamento) ? 'bg-blue-600 border-blue-400 text-white shadow-md' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}
               >
                 <PlayCircle size={18} className={ordem.status === 'Em andamento' ? 'animate-pulse' : ''} />
@@ -323,18 +327,35 @@ export default function DetalhesOSPage() {
             </div>
 
             {mostrarCampoAndamento && (
-              <div className="mt-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <div className="mt-4 space-y-2 p-3 bg-blue-500/5 rounded-2xl border border-blue-500/20 animate-in slide-in-from-top-2">
                 <label className="text-[9px] font-black uppercase text-blue-500 ml-1">Técnico Trabalhando:</label>
-                <input type="text" value={tecnicoAtuante} onChange={(e) => setTecnicoAtuante(e.target.value)} placeholder="Quem está no serviço?" className={`w-full rounded-xl p-3 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700 text-white focus:border-blue-500'}`} />
-                <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg">Confirmar Início</button>
+                <input 
+                  type="text" 
+                  value={tecnicoAtuante} 
+                  onChange={(e) => setTecnicoAtuante(e.target.value)} 
+                  placeholder="Quem está no serviço?" 
+                  className={`w-full rounded-xl p-3 text-sm font-bold outline-none border transition-all ${clean ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-slate-700 text-white focus:border-blue-500'}`} 
+                />
+                <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg flex items-center justify-center gap-2">
+                  {atualizandoStatusRapido ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                  Confirmar Início
+                </button>
               </div>
             )}
 
             {mostrarCampoParada && (
-              <div className="mt-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <div className="mt-4 space-y-2 p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 animate-in slide-in-from-top-2">
                 <label className="text-[9px] font-black uppercase text-amber-500 ml-1">Motivo da Parada:</label>
-                <textarea value={motivoParada} onChange={(e) => setMotivoParada(e.target.value)} placeholder="Por que parou?" className={`w-full rounded-xl p-3 text-sm font-bold outline-none border min-h-[80px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700 text-white focus:border-amber-500'}`} />
-                <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg">Confirmar Parada</button>
+                <textarea 
+                  value={motivoParada} 
+                  onChange={(e) => setMotivoParada(e.target.value)} 
+                  placeholder="Por que parou?" 
+                  className={`w-full rounded-xl p-3 text-sm font-bold border outline-none min-h-[80px] ${clean ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-slate-700 text-white focus:border-amber-500'}`} 
+                />
+                <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg flex items-center justify-center gap-2">
+                  {atualizandoStatusRapido ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                  Confirmar Parada
+                </button>
               </div>
             )}
           </section>
