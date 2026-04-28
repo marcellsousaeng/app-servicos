@@ -13,7 +13,7 @@ import {
   Settings,
   ChevronRight,
   FileText,
-  Search // Importado para o ícone de busca
+  Search
 } from 'lucide-react'
 
 type OrdemServico = {
@@ -31,8 +31,6 @@ export default function OrdensPage() {
   const [ordens, setOrdens] = useState<OrdemServico[]>([])
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
-  
-  // ESTADO PARA A BUSCA
   const [busca, setBusca] = useState('')
 
   useEffect(() => {
@@ -52,7 +50,6 @@ export default function OrdensPage() {
     setCarregando(false)
   }
 
-  // LÓGICA DE FILTRO EM TEMPO REAL
   const ordensFiltradas = ordens.filter(ordem => {
     const termo = busca.toLowerCase()
     return (
@@ -211,7 +208,6 @@ export default function OrdensPage() {
   )
 }
 
-// Sub-componentes permanecem iguais
 function InfoLinha({ titulo, texto, clean }: any) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -234,12 +230,14 @@ function MenuItem({ titulo, Icone, ativo, clean, onClick }: any) {
   )
 }
 
+// FUNÇÃO ATUALIZADA COM O STATUS "PARADO"
 function badgeStatus(status: string) {
   const base = "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider "
   switch (status) {
     case 'Em andamento': return base + "bg-blue-500/10 text-blue-500"
     case 'Finalizado': return base + "bg-emerald-500/10 text-emerald-500"
     case 'Cancelado': return base + "bg-rose-500/10 text-rose-500"
+    case 'Parado': // ADICIONADO AQUI
     case 'Aguardando material': return base + "bg-amber-500/10 text-amber-500"
     default: return base + "bg-slate-500/10 text-slate-500"
   }
