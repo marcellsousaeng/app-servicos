@@ -20,9 +20,7 @@ export default function DashboardPage() {
   const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
-    // Monitoramento de conexão
     setIsOnline(navigator.onLine)
-
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
     if (temaSalvo) setTema(temaSalvo)
     
@@ -45,12 +43,9 @@ export default function DashboardPage() {
 
   async function sincronizarDadosOffline() {
     const pendentes = JSON.parse(localStorage.getItem('os_pendentes') || '[]')
-    
     if (pendentes.length > 0 && navigator.onLine) {
       const dadosParaEnviar = pendentes.map(({ numero_os, id, ...resto }: any) => resto)
-      
       const { error } = await supabase.from('ordens_servico').insert(dadosParaEnviar)
-      
       if (!error) {
         localStorage.removeItem('os_pendentes')
         alert(`✅ ${pendentes.length} ordens sincronizadas com sucesso!`)
@@ -86,7 +81,7 @@ export default function DashboardPage() {
     
     setContadores({
       andamento: lista.filter(o => o.status === 'Em andamento').length,
-      parado: lista.filter(o => o.status === 'Aguardando material').length,
+      parado: lista.filter(o => o.status === 'Parado').length,
       finalizado: lista.filter(o => o.status === 'Finalizado').length,
       cancelado: lista.filter(o => o.status === 'Cancelado').length
     })
@@ -97,7 +92,7 @@ export default function DashboardPage() {
 
   const ordensFiltradas = useMemo(() => {
     if (filtroStatus === 'em_andamento') return ordens.filter(o => o.status === 'Em andamento')
-    if (filtroStatus === 'parado') return ordens.filter(o => o.status === 'Aguardando material')
+    if (filtroStatus === 'parado') return ordens.filter(o => o.status === 'Parado')
     if (filtroStatus === 'finalizado') return ordens.filter(o => o.status === 'Finalizado')
     return ordens
   }, [ordens, filtroStatus])
@@ -159,21 +154,30 @@ export default function DashboardPage() {
 
         {/* INDICADORES */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <CardMini clean={clean} titulo="Ativas" valor={contadores.andamento} Icone={Play} cor="blue" onClick={() => setFiltroStatus('em_andamento')} />
+          <CardMini clean={clean} titulo="Em Execução" valor={contadores.andamento} Icone={Play} cor="blue" onClick={() => setFiltroStatus('em_andamento')} />
           <CardMini clean={clean} titulo="Paradas" valor={contadores.parado} Icone={Pause} cor="amber" onClick={() => setFiltroStatus('parado')} />
           <CardMini clean={clean} titulo="Finalizadas" valor={contadores.finalizado} Icone={CheckCircle2} cor="emerald" onClick={() => setFiltroStatus('finalizado')} />
-          <CardMini clean={clean} titulo="Canceladas" valor={contadores.cancelado} Icone={XCircle} cor="rose" onClick={() => setFiltroStatus('todas')} />
+          <CardMini clean={clean} titulo="Total / Canc." valor={contadores.cancelado} Icone={XCircle} cor="rose" onClick={() => setFiltroStatus('todas')} />
         </div>
 
-        {/* LISTAGEM RECENTE */}
+        {/* LISTAGEM RECENTE / FILTRADA */}
         <section className={`rounded-3xl border shadow-xl overflow-hidden ${
           clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'
         }`}>
           <div className="p-5 flex items-center justify-between border-b border-white/5">
-            <h2 className="font-black text-lg uppercase tracking-tight">Recentes</h2>
-            <button onClick={() => router.push('/ordens')} className="text-blue-500 text-xs font-bold uppercase flex items-center gap-1">
-              Ver tudo <ArrowUpRight size={14} />
-            </button>
+            <h2 className="font-black text-lg uppercase tracking-tight">
+              {filtroStatus === 'todas' ? 'Recentes' : filtroStatus === 'parado' ? 'OS Paradas' : 'Resultado'}
+            </h2>
+            {filtroStatus !== 'todas' && (
+              <button onClick={() => setFiltroStatus('todas')} className="text-[10px] font-black text-blue-500 uppercase bg-blue-500/10 px-2 py-1 rounded-lg">
+                Limpar Filtro
+              </button>
+            )}
+            {filtroStatus === 'todas' && (
+              <button onClick={() => router.push('/ordens')} className="text-blue-500 text-xs font-bold uppercase flex items-center gap-1">
+                Ver tudo <ArrowUpRight size={14} />
+              </button>
+            )}
           </div>
 
           <div className="p-4 space-y-3">
@@ -182,7 +186,7 @@ export default function DashboardPage() {
             ) : ordensFiltradas.length === 0 ? (
               <div className="py-10 text-center text-slate-400 text-sm italic">Nenhum registro encontrado.</div>
             ) : (
-              ordensFiltradas.slice(0, 3).map((ordem) => (
+              (filtroStatus === 'todas' ? ordensFiltradas.slice(0, 5) : ordensFiltradas).map((ordem) => (
                 <div 
                   key={ordem.id} 
                   onClick={() => router.push(`/ordens/${ordem.id}`)}
@@ -195,15 +199,23 @@ export default function DashboardPage() {
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
                       ordem.status === 'Finalizado' 
                         ? 'bg-emerald-500/10 text-emerald-500' 
+                        : ordem.status === 'Parado'
+                        ? 'bg-amber-500 text-white'
                         : 'bg-blue-500/10 text-blue-500'
                     }`}>
                       {ordem.status}
                     </span>
                   </div>
                   <p className="text-sm font-bold truncate uppercase">{ordem.cliente}</p>
-                  <p className="text-xs opacity-50 truncate uppercase">
-                    {ordem.maquina || ordem.equipamento || 'NÃO IDENTIFICADO'}
+                  <p className="text-xs opacity-50 truncate uppercase mb-1">
+                    {ordem.maquina || 'MAQUINA NÃO INF.' }
                   </p>
+                  {ordem.status === 'Parado' && ordem.motivo_parada && (
+                    <div className="mt-2 p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                      <p className="text-[9px] font-black uppercase text-amber-500">Motivo:</p>
+                      <p className="text-[11px] font-bold italic opacity-80">"{ordem.motivo_parada}"</p>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -225,8 +237,6 @@ export default function DashboardPage() {
     </div>
   )
 }
-
-/* COMPONENTES DE APOIO INTERNOS */
 
 function Atalho({ titulo, Icone, onClick, destaque, clean }: any) {
   return (
