@@ -76,7 +76,9 @@ export default function DetalhesOSPage() {
   const [numOSFaturam, setNumOSFaturam] = useState('')
   const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
 
-  // Estados para Controle de Parada
+  // Estados para Controle de Operação
+  const [tecnicoAtuante, setTecnicoAtuante] = useState('')
+  const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
   const [motivoParada, setMotivoParada] = useState('')
   const [mostrarCampoParada, setMostrarCampoParada] = useState(false)
   const [atualizandoStatusRapido, setAtualizandoStatusRapido] = useState(false)
@@ -106,11 +108,9 @@ export default function DetalhesOSPage() {
     setNumPedido(osData.numero_pedido_faturamento || '')
     setNumOSFaturam(osData.numero_os_faturamento || '')
     setMotivoParada(osData.motivo_parada || '')
+    setTecnicoAtuante(osData.usuario_responsavel || '')
     
-    // Se a OS já estiver parada, mostramos o campo automaticamente
-    if (osData.status === 'Parado') {
-      setMostrarCampoParada(true)
-    }
+    if (osData.status === 'Parado') setMostrarCampoParada(true)
 
     setEditForm({
       cliente: osData.cliente || '',
@@ -121,9 +121,6 @@ export default function DetalhesOSPage() {
 
     const { data: fotosData } = await supabase.from('fotos_os').select('id, url').eq('id_os', id)
     setFotos(fotosData || [])
-
-    const { data: user } = await supabase.from('usuarios').select('nome').eq('usuario', osData.usuario_responsavel).single()
-    setNomeResponsavel(user?.nome || osData.usuario_responsavel || '-')
 
     const { data: upds } = await supabase.from('os_atualizacoes').select('*').eq('ordem_servico_id', id).order('created_at', { ascending: false })
     setAtualizacoes(upds || [])
@@ -137,32 +134,48 @@ export default function DetalhesOSPage() {
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
     
-    // Lógica para quando clica em Parar
+    // Validação Andamento
+    if (novoStatus === 'Em andamento') {
+        if (!mostrarCampoAndamento && ordem.status !== 'Em andamento') {
+            setMostrarCampoAndamento(true); setMostrarCampoParada(false); return 
+        }
+        if (!tecnicoAtuante.trim() && ordem.status !== 'Em andamento') {
+            alert("Informe o técnico que está assumindo."); return
+        }
+    }
+
+    // Validação Parada
     if (novoStatus === 'Parado') {
         if (!mostrarCampoParada) {
-            setMostrarCampoParada(true)
-            return // Para aqui para o usuário escrever
+            setMostrarCampoParada(true); setMostrarCampoAndamento(false); return 
         }
         if (!motivoParada.trim()) {
-            alert("Por favor, descreva o motivo da parada.")
-            return
+            alert("Descreva o motivo da parada."); return
         }
     }
 
     setAtualizandoStatusRapido(true)
-    const { error } = await supabase
-      .from('ordens_servico')
-      .update({ 
-        status: novoStatus,
-        motivo_parada: novoStatus === 'Parado' ? motivoParada : null
-      })
-      .eq('id', ordem.id)
+    
+    const dadosUpdate: any = { 
+      status: novoStatus,
+      motivo_parada: novoStatus === 'Parado' ? motivoParada : null,
+      usuario_responsavel: novoStatus === 'Em andamento' ? tecnicoAtuante : ordem.usuario_responsavel
+    }
+
+    const { error } = await supabase.from('ordens_servico').update(dadosUpdate).eq('id', ordem.id)
 
     if (!error) {
-      if (novoStatus === 'Em andamento') {
-          setMotivoParada('')
-          setMostrarCampoParada(false)
-      }
+      // Registrar no histórico automático
+      await supabase.from('os_atualizacoes').insert([{
+        ordem_servico_id: ordem.id,
+        descricao: novoStatus === 'Em andamento' 
+          ? `Status alterado para Em Andamento. Técnico: ${tecnicoAtuante}` 
+          : `Serviço paralisado. Motivo: ${motivoParada}`,
+        usuario_nome: 'SISTEMA'
+      }])
+
+      setMostrarCampoParada(false)
+      setMostrarCampoAndamento(false)
       await carregarDados()
     }
     setAtualizandoStatusRapido(false)
@@ -171,45 +184,32 @@ export default function DetalhesOSPage() {
   async function salvarEdicaoOS() {
     if (!ordem) return
     setSalvandoEdicao(true)
-    const { error } = await supabase
-      .from('ordens_servico')
-      .update({
+    const { error } = await supabase.from('ordens_servico').update({
         cliente: editForm.cliente,
         solicitante: editForm.solicitante,
         maquina: editForm.maquina,
         descricao: editForm.descricao
-      })
-      .eq('id', ordem.id)
+      }).eq('id', ordem.id)
 
-    if (!error) {
-      setModalEdicao(false)
-      carregarDados()
-    }
+    if (!error) { setModalEdicao(false); carregarDados() }
     setSalvandoEdicao(false)
   }
 
   async function handleAddFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0 || !ordem) return
-
     setEnviandoFoto(true)
     try {
       const uploads = Array.from(files).map(async (file) => {
         const nomeArquivo = `${ordem.id}/${Date.now()}-${file.name}`
         const { error: storageError } = await supabase.storage.from('os-imagens').upload(nomeArquivo, file)
         if (storageError) throw storageError
-
         const { data: { publicUrl } } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
         return supabase.from('fotos_os').insert([{ id_os: ordem.id, url: publicUrl }])
       })
-
       await Promise.all(uploads)
       carregarDados()
-    } catch (err) {
-      alert("Erro ao enviar foto")
-    } finally {
-      setEnviandoFoto(false)
-    }
+    } catch (err) { alert("Erro ao enviar foto") } finally { setEnviandoFoto(false) }
   }
 
   async function salvarAtualizacao() {
@@ -244,18 +244,12 @@ export default function DetalhesOSPage() {
 
   async function salvarDadosFaturamento() {
     setSalvandoDadosExtras(true)
-    const { error } = await supabase
-      .from('ordens_servico')
-      .update({
+    const { error } = await supabase.from('ordens_servico').update({
         numero_pedido_faturamento: numPedido,
         numero_os_faturamento: numOSFaturam
-      })
-      .eq('id', ordem?.id)
+      }).eq('id', ordem?.id)
 
-    if (!error) {
-      alert("Faturamento atualizado!")
-      carregarDados()
-    }
+    if (!error) { alert("Faturamento atualizado!"); carregarDados() }
     setSalvandoDadosExtras(false)
   }
 
@@ -283,7 +277,7 @@ export default function DetalhesOSPage() {
           <div className="flex-1">
             <h1 className="text-lg font-black uppercase italic tracking-tighter">OS #{ordem.numero_os ?? ordem.id}</h1>
             <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border uppercase ${badgeEstilo(ordem.status)}`}>
+                <span className={badgeEstilo(ordem.status)}>
                 {ordem.status}
                 </span>
                 {!encerrada && (
@@ -300,19 +294,19 @@ export default function DetalhesOSPage() {
           )}
         </div>
 
-        {/* STATUS DE EXECUÇÃO COMPACTO */}
+        {/* STATUS DE EXECUÇÃO */}
         {!encerrada && (
           <section className={`rounded-3xl p-5 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
             <div className="flex items-center gap-2 mb-4">
               <Settings size={16} className="text-blue-500" />
-              <h2 className="text-xs font-black uppercase tracking-tighter">Status de Execução</h2>
+              <h2 className="text-xs font-black uppercase tracking-tighter">Controle de Operação</h2>
             </div>
             
             <div className="flex gap-2">
               <button 
                 onClick={() => atualizarStatusExecucao('Em andamento')} 
-                disabled={atualizandoStatusRapido || ordem.status === 'Em andamento'}
-                className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border transition-all active:scale-95 ${ordem.status === 'Em andamento' ? 'bg-blue-600 border-blue-400 text-white shadow-md' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}
+                disabled={atualizandoStatusRapido}
+                className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border transition-all active:scale-95 ${(ordem.status === 'Em andamento' || mostrarCampoAndamento) ? 'bg-blue-600 border-blue-400 text-white shadow-md' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}
               >
                 <PlayCircle size={18} className={ordem.status === 'Em andamento' ? 'animate-pulse' : ''} />
                 <span className="text-[10px] font-black uppercase">Andamento</span>
@@ -328,24 +322,19 @@ export default function DetalhesOSPage() {
               </button>
             </div>
 
-            {/* CAMPO DE JUSTIFICATIVA - APARECE SE CLICAR EM PARAR OU SE JÁ ESTIVER PARADO */}
-            {(mostrarCampoParada) && (
+            {mostrarCampoAndamento && (
+              <div className="mt-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-[9px] font-black uppercase text-blue-500 ml-1">Técnico Trabalhando:</label>
+                <input type="text" value={tecnicoAtuante} onChange={(e) => setTecnicoAtuante(e.target.value)} placeholder="Quem está no serviço?" className={`w-full rounded-xl p-3 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700 text-white focus:border-blue-500'}`} />
+                <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase shadow-lg">Confirmar Início</button>
+              </div>
+            )}
+
+            {mostrarCampoParada && (
               <div className="mt-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
                 <label className="text-[9px] font-black uppercase text-amber-500 ml-1">Motivo da Parada:</label>
-                <textarea 
-                  value={motivoParada} 
-                  onChange={(e) => setMotivoParada(e.target.value)} 
-                  placeholder="Descreva o motivo (ex: aguardando peça, falta de luz...)"
-                  className={`w-full rounded-xl p-3 text-sm font-bold outline-none border transition-all min-h-[80px] ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white focus:border-amber-500'}`} 
-                />
-                <button 
-                  onClick={() => atualizarStatusExecucao('Parado')} 
-                  disabled={atualizandoStatusRapido}
-                  className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg active:scale-95 flex items-center justify-center gap-2"
-                >
-                  {atualizandoStatusRapido ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Confirmar Parada
-                </button>
+                <textarea value={motivoParada} onChange={(e) => setMotivoParada(e.target.value)} placeholder="Por que parou?" className={`w-full rounded-xl p-3 text-sm font-bold outline-none border min-h-[80px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700 text-white focus:border-amber-500'}`} />
+                <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg">Confirmar Parada</button>
               </div>
             )}
           </section>
@@ -357,104 +346,79 @@ export default function DetalhesOSPage() {
             <InfoItem clean={clean} Icone={User} titulo="Cliente" texto={ordem.cliente} />
             <InfoItem clean={clean} Icone={Monitor} titulo="Máquina" texto={ordem.maquina} />
             <InfoItem clean={clean} Icone={Users} titulo="Solicitante" texto={ordem.solicitante || '-'} />
-            <InfoItem clean={clean} Icone={User} titulo="Responsável" texto={nomeResponsavel} />
+            <InfoItem clean={clean} Icone={User} titulo="Técnico Atual" texto={ordem.usuario_responsavel || '-'} />
             <InfoItem clean={clean} Icone={FileText} titulo="Descrição Original" texto={ordem.descricao} full />
-            {ordem.status === 'Parado' && ordem.motivo_parada && (
-                <div className="col-span-2 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl mt-2">
+            {ordem.status === 'Parado' && (
+                <div className="col-span-2 p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
                     <p className="text-[9px] font-black uppercase text-amber-500">Justificativa da Parada:</p>
-                    <p className="text-xs font-bold italic">"{ordem.motivo_parada}"</p>
+                    <p className="text-xs font-bold italic">"{ordem.motivo_parada || 'Não informada'}"</p>
                 </div>
             )}
           </div>
         </section>
 
-        {/* GALERIA DE FOTOS */}
+        {/* FOTOS */}
         <section className={`rounded-3xl p-6 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
-          <div className="flex flex-col gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <Camera size={20} className="text-blue-500" />
-              <h2 className="font-black uppercase tracking-tighter">Fotos do Registro</h2>
-            </div>
-            {!encerrada && (
-              <div className="flex gap-2">
-                <label className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-3 rounded-xl cursor-pointer active:scale-95 transition-all shadow-md">
-                  {enviandoFoto ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                  <span className="text-[10px] font-black uppercase">Câmera</span>
-                  <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddFoto} disabled={enviandoFoto} />
-                </label>
-                <label className={`flex-1 flex items-center justify-center gap-2 border px-3 py-3 rounded-xl cursor-pointer active:scale-95 transition-all shadow-sm ${clean ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-slate-700/50 border-slate-600 text-slate-200'}`}>
-                  <FolderOpen size={16} />
-                  <span className="text-[10px] font-black uppercase">Ficheiro</span>
-                  <input type="file" multiple hidden accept="image/*" onChange={handleAddFoto} disabled={enviandoFoto} />
-                </label>
-              </div>
-            )}
+          <div className="flex items-center gap-2 mb-4">
+            <Camera size={20} className="text-blue-500" />
+            <h2 className="font-black uppercase tracking-tighter">Galeria</h2>
           </div>
-          {fotos.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {fotos.map((f) => (
-                <div key={f.id} className="relative group">
-                  <img src={f.url} alt="Registro" className="w-full h-32 object-cover rounded-xl border border-slate-700/30 shadow-sm" />
-                  <a href={f.url} target="_blank" className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity">
-                    <Search size={20} className="text-white" />
-                  </a>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-24 rounded-2xl border-2 border-dashed border-slate-500/10 flex flex-col items-center justify-center text-slate-500 gap-1">
-              <Camera size={24} opacity={0.3} />
-              <span className="text-[9px] font-bold uppercase">Nenhum registro visual</span>
+          {!encerrada && (
+            <div className="flex gap-2 mb-4">
+              <label className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl cursor-pointer shadow-md">
+                <Camera size={16} /> <span className="text-[10px] font-black">Câmera</span>
+                <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddFoto} disabled={enviandoFoto} />
+              </label>
+              <label className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl cursor-pointer ${clean ? 'bg-slate-100' : 'bg-slate-700/50 text-slate-200'}`}>
+                <FolderOpen size={16} /> <span className="text-[10px] font-black">Arquivo</span>
+                <input type="file" multiple hidden accept="image/*" onChange={handleAddFoto} disabled={enviandoFoto} />
+              </label>
             </div>
           )}
+          <div className="grid grid-cols-2 gap-3">
+            {fotos.map((f) => (
+              <img key={f.id} src={f.url} className="w-full h-32 object-cover rounded-xl border border-slate-700/30" onClick={() => window.open(f.url)} />
+            ))}
+          </div>
         </section>
 
         {/* MATERIAIS */}
         <div className="mb-6">
           {!encerrada && (
-            <button onClick={() => router.push(`/ordens/${id_os}/material`)} className={`w-full py-4 mb-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 active:scale-95 transition-all ${clean ? 'bg-white border-blue-500/30 text-blue-600' : 'bg-[#0d1726] border-blue-500/20 text-blue-400'}`}>
-              <Plus size={20} /> <span className="font-black uppercase italic tracking-tight">Acrescentar Material</span>
+            <button onClick={() => router.push(`/ordens/${id_os}/material`)} className={`w-full py-4 mb-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 ${clean ? 'border-blue-500/30 text-blue-600' : 'border-blue-500/20 text-blue-400'}`}>
+              <Plus size={20} /> <span className="font-black uppercase">Acrescentar Material</span>
             </button>
           )}
           {materiais.length > 0 && (
-            <section className={`rounded-3xl p-6 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
-              <div className="flex items-center gap-2 mb-4 border-b border-slate-500/10 pb-4">
-                <Layers size={18} className="text-blue-500" />
-                <h2 className="font-black uppercase tracking-tighter">Materiais Utilizados</h2>
-              </div>
-              <div className="space-y-3">
+            <div className={`rounded-3xl p-6 border ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
+              <h2 className="font-black uppercase text-xs mb-4">Peças Utilizadas</h2>
+              <div className="space-y-2">
                 {materiais.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between bg-slate-500/5 p-3 rounded-xl border border-white/5">
-                    <div>
-                      <p className="text-xs font-black uppercase text-blue-500">{m.descricao || m.tipo}</p>
-                      <p className="text-[10px] opacity-60">
-                        {m.tipo === 'chapa' && `${m.espessura}mm x ${m.largura}mm x ${m.comprimento}mm`}
-                        {(m.tipo === 'eixo' || m.tipo === 'tubo') && `Ø ${m.diametro}mm x ${m.comprimento}mm`}
-                      </p>
-                    </div>
-                    <span className="text-xs font-bold bg-blue-500/10 px-2 py-1 rounded">x{m.quantidade}</span>
+                  <div key={m.id} className="flex justify-between items-center p-3 bg-slate-500/5 rounded-xl border border-white/5">
+                    <span className="text-xs font-bold uppercase">{m.descricao || m.tipo}</span>
+                    <span className="text-xs font-black text-blue-500">x{m.quantidade}</span>
                   </div>
                 ))}
               </div>
-            </section>
+            </div>
           )}
         </div>
 
-        {/* MÃO DE OBRA */}
-        <section className={`rounded-3xl p-6 mb-8 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
+        {/* MÃO DE OBRA / HISTÓRICO */}
+        <section className={`rounded-3xl p-6 mb-8 border ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
           <div className="flex items-center gap-2 mb-6 border-b border-slate-500/10 pb-4">
             <FileText size={20} className="text-purple-500" />
-            <h2 className="font-black uppercase tracking-tighter">Mão de Obra</h2>
+            <h2 className="font-black uppercase tracking-tighter">Histórico / Mão de Obra</h2>
           </div>
-          <div className="space-y-8 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-500/10">
+          <div className="space-y-6 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-500/10">
             {atualizacoes.map((item) => (
               <div key={item.id} className="pl-8 relative">
-                <div className="absolute left-1.5 top-1.5 w-3.5 h-3.5 rounded-full bg-purple-500 border-4 border-[#0d1726]" />
-                <div className="flex justify-between items-start">
-                  <p className="font-black text-xs uppercase text-blue-500">{item.usuario_nome}</p>
-                  <span className="text-[9px] font-bold opacity-40">{new Date(item.created_at).toLocaleString('pt-BR')}</span>
+                <div className={`absolute left-1.5 top-1.5 w-3.5 h-3.5 rounded-full border-4 ${item.usuario_nome === 'SISTEMA' ? 'bg-amber-500' : 'bg-purple-500'} ${clean ? 'border-white' : 'border-[#0d1726]'}`} />
+                <div className="flex justify-between">
+                  <p className="font-black text-[10px] uppercase text-blue-500">{item.usuario_nome}</p>
+                  <span className="text-[9px] opacity-40">{new Date(item.created_at).toLocaleDateString()}</span>
                 </div>
-                <p className="text-sm font-medium mt-2 leading-relaxed">{item.descricao}</p>
+                <p className="text-sm font-medium mt-1">{item.descricao}</p>
               </div>
             ))}
           </div>
@@ -462,41 +426,31 @@ export default function DetalhesOSPage() {
 
         {/* FATURAMENTO */}
         {exibirFaturamento && (
-          <section className={`rounded-3xl p-6 mb-8 border shadow-lg transition-all duration-500 ${ordem.status === 'Finalizado' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-blue-500/40 bg-blue-500/5'} ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
-            <div className="flex items-center gap-2 mb-6">
-              <CircleDollarSign size={20} className={ordem.status === 'Finalizado' ? 'text-emerald-500' : 'text-blue-500'} />
-              <h2 className="font-black uppercase tracking-tighter">Faturamento</h2>
-            </div>
+          <section className={`rounded-3xl p-6 mb-8 border ${ordem.status === 'Finalizado' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-blue-500/40 bg-blue-500/5'} ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
+            <h2 className="font-black uppercase text-xs mb-4">Dados Financeiros</h2>
             <div className="space-y-4">
-              <input type="text" value={numPedido} onChange={(e) => setNumPedido(e.target.value)} placeholder="Número do Pedido"
-                className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white'}`} />
-              <input type="text" value={numOSFaturam} onChange={(e) => setNumOSFaturam(e.target.value)} placeholder="Número da OS (Sistema)"
-                className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white'}`} />
-              <button onClick={salvarDadosFaturamento} disabled={salvandoDadosExtras} className={`w-full py-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 flex items-center justify-center gap-2 ${ordem.status === 'Finalizado' ? 'bg-emerald-500' : 'bg-blue-600'}`}>
-                {salvandoDadosExtras ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                Salvar Dados
-              </button>
+              <input type="text" value={numPedido} onChange={(e) => setNumPedido(e.target.value)} placeholder="Nº Pedido" className={`w-full rounded-xl p-4 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
+              <input type="text" value={numOSFaturam} onChange={(e) => setNumOSFaturam(e.target.value)} placeholder="Nº OS Sistema" className={`w-full rounded-xl p-4 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
+              <button onClick={salvarDadosFaturamento} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg">Salvar Dados</button>
             </div>
           </section>
         )}
 
-        {/* BOTÕES DE FINALIZAÇÃO */}
+        {/* FINALIZAR */}
         {!encerrada && (
           <div className="grid grid-cols-2 gap-4 mb-10">
-            <button onClick={() => alterarStatus('Cancelado')} className="flex flex-col items-center justify-center p-5 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-500 active:scale-95 transition-all">
-              <XCircle size={28} className="mb-2" />
-              <span className="text-[10px] font-black uppercase">Cancelar OS</span>
+            <button onClick={() => alterarStatus('Cancelado')} className="flex flex-col items-center p-5 rounded-3xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
+              <XCircle size={28} className="mb-2" /> <span className="text-[10px] font-black uppercase">Cancelar</span>
             </button>
-            <button onClick={() => alterarStatus('Finalizado')} className="flex flex-col items-center justify-center p-5 rounded-3xl bg-emerald-500 text-white shadow-lg active:scale-95 transition-all">
-              <CheckCircle2 size={28} className="mb-2" />
-              <span className="text-[10px] font-black uppercase">Finalizar OS</span>
+            <button onClick={() => alterarStatus('Finalizado')} className="flex flex-col items-center p-5 rounded-3xl bg-emerald-500 text-white shadow-lg">
+              <CheckCircle2 size={28} className="mb-2" /> <span className="text-[10px] font-black uppercase">Finalizar</span>
             </button>
           </div>
         )}
       </main>
 
       {/* MENU INFERIOR */}
-      <nav className={`fixed bottom-0 left-0 right-0 border-t py-3 px-6 z-50 transition-colors ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'}`}>
+      <nav className={`fixed bottom-0 left-0 right-0 border-t py-3 px-6 z-50 ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'}`}>
         <div className="max-w-md mx-auto flex justify-between items-center">
           <MenuNav titulo="Início" Icone={LayoutGrid} clean={clean} onClick={() => router.push('/dashboard')} />
           <MenuNav ativo titulo="Ordens" Icone={ClipboardList} clean={clean} onClick={() => router.push('/ordens')} />
@@ -505,43 +459,31 @@ export default function DetalhesOSPage() {
         </div>
       </nav>
 
-      {/* MODAL DE EDIÇÃO */}
+      {/* MODAL EDIÇÃO */}
       {modalEdicao && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[101] flex items-center justify-center p-6">
-            <div className={`w-full max-w-sm rounded-[32px] p-8 border shadow-2xl animate-in zoom-in-95 duration-200 ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-700'}`}>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-black uppercase italic">Editar Dados</h2>
-                    <button onClick={() => setModalEdicao(false)} className="text-slate-500"><X size={24}/></button>
-                </div>
+            <div className={`w-full max-w-sm rounded-[32px] p-8 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-700'}`}>
+                <h2 className="text-lg font-black uppercase italic mb-6">Editar OS</h2>
                 <div className="space-y-4">
-                    <input value={editForm.cliente} onChange={(e) => setEditForm({...editForm, cliente: e.target.value})} placeholder="Cliente" className={`w-full rounded-xl p-3 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
-                    <input value={editForm.solicitante} onChange={(e) => setEditForm({...editForm, solicitante: e.target.value})} placeholder="Solicitante" className={`w-full rounded-xl p-3 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
-                    <input value={editForm.maquina} onChange={(e) => setEditForm({...editForm, maquina: e.target.value})} placeholder="Máquina" className={`w-full rounded-xl p-3 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
-                    <textarea value={editForm.descricao} onChange={(e) => setEditForm({...editForm, descricao: e.target.value})} placeholder="Descrição" className={`w-full rounded-xl p-3 text-sm font-bold border outline-none min-h-[100px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
-                    <button onClick={salvarEdicaoOS} disabled={salvandoEdicao} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 transition-all">
-                        {salvandoEdicao ? <Loader2 className="animate-spin mx-auto"/> : 'Salvar Alterações'}
-                    </button>
+                    <input value={editForm.cliente} onChange={(e) => setEditForm({...editForm, cliente: e.target.value})} placeholder="Cliente" className={`w-full rounded-xl p-3 border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
+                    <input value={editForm.maquina} onChange={(e) => setEditForm({...editForm, maquina: e.target.value})} placeholder="Máquina" className={`w-full rounded-xl p-3 border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
+                    <textarea value={editForm.descricao} onChange={(e) => setEditForm({...editForm, descricao: e.target.value})} placeholder="Descrição" className={`w-full rounded-xl p-3 border outline-none min-h-[100px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
+                    <button onClick={salvarEdicaoOS} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-white shadow-lg">Salvar</button>
+                    <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold text-slate-500 uppercase">Fechar</button>
                 </div>
             </div>
         </div>
       )}
 
-      {/* MODAL DE ATUALIZAÇÃO MÃO DE OBRA */}
+      {/* MODAL ATUALIZAÇÃO */}
       {modalAtualizacao && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end animate-in fade-in slide-in-from-bottom duration-300">
-          <div className={`w-full max-w-md mx-auto rounded-t-[40px] p-8 pb-10 border-t ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-700'}`}>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black uppercase italic">Nova Atualização</h2>
-              <button onClick={() => setModalAtualizacao(false)} className="w-10 h-10 rounded-full bg-slate-500/10 flex items-center justify-center"><X size={20} /></button>
-            </div>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end">
+          <div className={`w-full max-w-md mx-auto rounded-t-[40px] p-8 pb-10 border-t ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-700'}`}>
+            <h2 className="text-xl font-black uppercase italic mb-8">Novo Relato</h2>
             <div className="space-y-4">
-              <textarea placeholder="O que foi feito?" value={descricaoAtualizacao} onChange={(e) => setDescricaoAtualizacao(e.target.value)}
-                className={`w-full rounded-2xl p-4 text-sm font-medium outline-none min-h-[120px] border transition-all ${clean ? 'bg-slate-50 border-slate-200' : 'bg-[#111c2e] border-slate-700'}`} />
-              <input placeholder="Técnico responsável" value={tecnicosResponsaveis} onChange={(e) => setTecnicosResponsaveis(e.target.value)}
-                className={`w-full rounded-2xl p-4 text-sm font-medium outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200' : 'bg-[#111c2e] border-slate-700'}`} />
-              <button onClick={salvarAtualizacao} disabled={salvandoAtualizacao} className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 transition-all">
-                {salvandoAtualizacao ? 'Gravando...' : 'Salvar Relatório'}
-              </button>
+              <textarea placeholder="Relatório de trabalho..." value={descricaoAtualizacao} onChange={(e) => setDescricaoAtualizacao(e.target.value)} className={`w-full rounded-2xl p-4 text-sm outline-none border min-h-[120px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
+              <button onClick={salvarAtualizacao} className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase text-white shadow-lg">Salvar Relatório</button>
+              <button onClick={() => setModalAtualizacao(false)} className="w-full text-xs font-bold text-slate-500 uppercase">Cancelar</button>
             </div>
           </div>
         </div>
@@ -574,11 +516,12 @@ function MenuNav({ titulo, Icone, ativo, clean, onClick }: any) {
 }
 
 function badgeEstilo(status: string) {
+  const base = "text-[10px] font-black px-2 py-0.5 rounded-md border uppercase "
   switch (status) {
-    case 'Finalizado': return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-    case 'Cancelado': return 'bg-rose-500/10 border-rose-500/20 text-rose-500'
-    case 'Aguardando material': return 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-    case 'Parado': return 'bg-amber-500 border-amber-500 text-white'
-    default: return 'bg-blue-500/10 border-blue-500/20 text-blue-500'
+    case 'Finalizado': return base + 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+    case 'Cancelado': return base + 'bg-rose-500/10 border-rose-500/20 text-rose-500'
+    case 'Parado':
+    case 'Aguardando material': return base + 'bg-amber-500/10 border-amber-500/20 text-amber-500'
+    default: return base + 'bg-blue-500/10 border-blue-500/20 text-blue-500'
   }
 }
