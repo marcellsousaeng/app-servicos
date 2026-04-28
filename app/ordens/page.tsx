@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { 
@@ -13,7 +13,8 @@ import {
   Settings,
   ChevronRight,
   FileText,
-  Search
+  Search,
+  Filter
 } from 'lucide-react'
 
 type OrdemServico = {
@@ -31,7 +32,10 @@ export default function OrdensPage() {
   const [ordens, setOrdens] = useState<OrdemServico[]>([])
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
+  
+  // ESTADOS DE FILTRO
   const [busca, setBusca] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos')
 
   useEffect(() => {
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
@@ -50,15 +54,22 @@ export default function OrdensPage() {
     setCarregando(false)
   }
 
-  const ordensFiltradas = ordens.filter(ordem => {
-    const termo = busca.toLowerCase()
-    return (
-      ordem.cliente?.toLowerCase().includes(termo) ||
-      ordem.solicitante?.toLowerCase().includes(termo) ||
-      ordem.maquina?.toLowerCase().includes(termo) ||
-      ordem.numero_os?.toString().includes(termo)
-    )
-  })
+  // LÓGICA DE FILTRO COMBINADA (BUSCA + STATUS)
+  const ordensFiltradas = useMemo(() => {
+    return ordens.filter(ordem => {
+      const termo = busca.toLowerCase()
+      const bateBusca = (
+        ordem.cliente?.toLowerCase().includes(termo) ||
+        ordem.solicitante?.toLowerCase().includes(termo) ||
+        ordem.maquina?.toLowerCase().includes(termo) ||
+        ordem.numero_os?.toString().includes(termo)
+      )
+
+      const bateStatus = filtroStatus === 'todos' || ordem.status === filtroStatus
+
+      return bateBusca && bateStatus
+    })
+  }, [ordens, busca, filtroStatus])
 
   const clean = tema === 'clean'
 
@@ -96,13 +107,13 @@ export default function OrdensPage() {
         </div>
 
         {/* BARRA DE PESQUISA */}
-        <div className="mb-6 relative">
+        <div className="mb-4 relative">
           <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${clean ? 'text-slate-400' : 'text-slate-500'}`}>
             <Search size={18} />
           </div>
           <input
             type="text"
-            placeholder="Pesquisar cliente, máquina ou OS..."
+            placeholder="Pesquisar..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className={`w-full py-4 pl-12 pr-4 rounded-2xl border outline-none transition-all font-medium text-sm ${
@@ -111,6 +122,15 @@ export default function OrdensPage() {
                 : 'bg-[#0d1726] border-slate-800 focus:border-blue-500 text-white'
             }`}
           />
+        </div>
+
+        {/* FILTROS POR STATUS (CARROSSEL) */}
+        <div className="flex gap-2 overflow-x-auto pb-6 no-scrollbar">
+          <BotaoFiltro label="Todos" ativo={filtroStatus === 'todos'} onClick={() => setFiltroStatus('todos')} clean={clean} />
+          <BotaoFiltro label="Em andamento" ativo={filtroStatus === 'Em andamento'} onClick={() => setFiltroStatus('Em andamento')} clean={clean} />
+          <BotaoFiltro label="Parado" ativo={filtroStatus === 'Parado'} onClick={() => setFiltroStatus('Parado')} clean={clean} />
+          <BotaoFiltro label="Finalizado" ativo={filtroStatus === 'Finalizado'} onClick={() => setFiltroStatus('Finalizado')} clean={clean} />
+          <BotaoFiltro label="Cancelado" ativo={filtroStatus === 'Cancelado'} onClick={() => setFiltroStatus('Cancelado')} clean={clean} />
         </div>
 
         {/* CONTAINER PRINCIPAL */}
@@ -124,7 +144,7 @@ export default function OrdensPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500">
                 <ClipboardList size={22} />
               </div>
-              <h2 className="font-bold">Ordens cadastradas</h2>
+              <h2 className="font-bold">Resultados</h2>
             </div>
 
             <button
@@ -141,8 +161,8 @@ export default function OrdensPage() {
             {carregando ? (
               <div className="py-10 text-center animate-pulse text-slate-500">Carregando...</div>
             ) : ordensFiltradas.length === 0 ? (
-              <div className="py-10 text-center text-slate-500 text-sm">
-                {busca ? 'Nenhum resultado para sua busca' : 'Nenhuma ordem encontrada'}
+              <div className="py-10 text-center text-slate-500 text-sm italic">
+                Nenhuma OS encontrada para este filtro.
               </div>
             ) : (
               ordensFiltradas.map((ordem) => (
@@ -158,8 +178,8 @@ export default function OrdensPage() {
                       <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-600/20">
                         {ordem.numero_os ?? ordem.id}
                       </div>
-                      <div>
-                        <p className="font-bold text-sm leading-tight">{ordem.cliente}</p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm leading-tight truncate">{ordem.cliente}</p>
                         <p className="text-[10px] opacity-50 uppercase font-bold mt-1 tracking-tighter">
                           OS #{ordem.numero_os ?? ordem.id}
                         </p>
@@ -188,7 +208,7 @@ export default function OrdensPage() {
             clean ? 'bg-slate-50/50 border-slate-100 text-slate-500' : 'bg-[#111c2e]/30 border-slate-800 text-slate-400'
           }`}>
             <FileText size={14} />
-            {busca ? `Encontradas: ${ordensFiltradas.length}` : `Total de ordens: ${ordens.length}`}
+            Mostrando {ordensFiltradas.length} de {ordens.length}
           </div>
         </section>
       </main>
@@ -198,13 +218,31 @@ export default function OrdensPage() {
         clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
       }`}>
         <div className="max-w-md mx-auto grid grid-cols-4 px-4">
-          <MenuItem clean={clean} titulo="Dashboard" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
+          <MenuItem clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
           <MenuItem clean={clean} ativo titulo="Ordens" Icone={ClipboardList} onClick={() => {}} />
           <MenuItem clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
           <MenuItem clean={clean} titulo="Config." Icone={Settings} onClick={() => router.push('/configuracao')} />
         </div>
       </nav>
     </div>
+  )
+}
+
+// COMPONENTE DE FILTRO (PILLS)
+function BotaoFiltro({ label, ativo, onClick, clean }: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border ${
+        ativo 
+          ? 'bg-blue-600 border-blue-500 text-white shadow-lg' 
+          : clean 
+            ? 'bg-white border-slate-200 text-slate-400' 
+            : 'bg-[#0d1726] border-slate-800 text-slate-500'
+      }`}
+    >
+      {label}
+    </button>
   )
 }
 
@@ -230,14 +268,13 @@ function MenuItem({ titulo, Icone, ativo, clean, onClick }: any) {
   )
 }
 
-// FUNÇÃO ATUALIZADA COM O STATUS "PARADO"
 function badgeStatus(status: string) {
-  const base = "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider "
+  const base = "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shrink-0 "
   switch (status) {
     case 'Em andamento': return base + "bg-blue-500/10 text-blue-500"
     case 'Finalizado': return base + "bg-emerald-500/10 text-emerald-500"
     case 'Cancelado': return base + "bg-rose-500/10 text-rose-500"
-    case 'Parado': // ADICIONADO AQUI
+    case 'Parado':
     case 'Aguardando material': return base + "bg-amber-500/10 text-amber-500"
     default: return base + "bg-slate-500/10 text-slate-500"
   }
