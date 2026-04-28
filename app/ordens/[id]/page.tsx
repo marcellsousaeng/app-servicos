@@ -105,7 +105,6 @@ export default function DetalhesOSPage() {
     setNumOSFaturam(osData.numero_os_faturamento || '')
     setMotivoParada(osData.motivo_cancelamento || '')
     
-    // Preencher form de edição
     setEditForm({
       cliente: osData.cliente || '',
       solicitante: osData.solicitante || '',
@@ -131,7 +130,7 @@ export default function DetalhesOSPage() {
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
     if (novoStatus === 'Parado' && !motivoParada.trim()) {
-      alert("Por favor, informe o motivo da parada.")
+      alert("Por favor, descreva o motivo da parada no campo abaixo.")
       return
     }
 
@@ -285,30 +284,50 @@ export default function DetalhesOSPage() {
           )}
         </div>
 
-        {/* STATUS DE EXECUÇÃO */}
+        {/* STATUS DE EXECUÇÃO COMPACTO */}
         {!encerrada && (
-          <section className={`rounded-3xl p-6 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
+          <section className={`rounded-3xl p-5 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
             <div className="flex items-center gap-2 mb-4">
-              <Settings size={18} className="text-blue-500" />
-              <h2 className="font-black uppercase tracking-tighter">Status de Execução</h2>
+              <Settings size={16} className="text-blue-500" />
+              <h2 className="text-xs font-black uppercase tracking-tighter">Status de Execução</h2>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => atualizarStatusExecucao('Em andamento')} disabled={atualizandoStatusRapido || ordem.status === 'Em andamento'}
-                className={`flex-1 py-4 rounded-2xl flex flex-col items-center gap-1 border transition-all active:scale-95 ${ordem.status === 'Em andamento' ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}>
-                <PlayCircle size={20} className={ordem.status === 'Em andamento' ? 'animate-pulse' : ''} />
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={() => atualizarStatusExecucao('Em andamento')} 
+                disabled={atualizandoStatusRapido || ordem.status === 'Em andamento'}
+                className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border transition-all active:scale-95 ${ordem.status === 'Em andamento' ? 'bg-blue-600 border-blue-400 text-white shadow-md' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}
+              >
+                <PlayCircle size={18} className={ordem.status === 'Em andamento' ? 'animate-pulse' : ''} />
                 <span className="text-[10px] font-black uppercase">Andamento</span>
               </button>
-              <button onClick={() => { if(ordem.status !== 'Parado') atualizarStatusExecucao('Parado') }} disabled={atualizandoStatusRapido || ordem.status === 'Parado'}
-                className={`flex-1 py-4 rounded-2xl flex flex-col items-center gap-1 border transition-all active:scale-95 ${ordem.status === 'Parado' ? 'bg-amber-500 border-amber-400 text-white shadow-lg' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}>
-                <PauseCircle size={20} />
-                <span className="text-[10px] font-black uppercase">Parado</span>
+
+              <button 
+                onClick={() => { if(ordem.status !== 'Parado') atualizarStatusExecucao('Parado') }} 
+                disabled={atualizandoStatusRapido || ordem.status === 'Parado'}
+                className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 border transition-all active:scale-95 ${ordem.status === 'Parado' ? 'bg-amber-500 border-amber-400 text-white shadow-md' : clean ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-800/40 border-slate-700 text-slate-500'}`}
+              >
+                <PauseCircle size={18} />
+                <span className="text-[10px] font-black uppercase">Parar</span>
               </button>
             </div>
+
+            {/* CAMPO DE MOTIVO - APARECE QUANDO STATUS FOR PARADO */}
             {ordem.status === 'Parado' && (
-              <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
-                <textarea value={motivoParada} onChange={(e) => setMotivoParada(e.target.value)} placeholder="Motivo da interrupção..."
-                  className={`w-full rounded-xl p-3 text-sm font-bold outline-none border transition-all min-h-[80px] ${clean ? 'bg-slate-50 border-slate-200 focus:border-amber-500' : 'bg-[#111c2e] border-slate-700 focus:border-amber-500'}`} />
-                <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-2 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-lg text-[10px] font-black uppercase">Atualizar Motivo</button>
+              <div className="mt-4 space-y-2 animate-in slide-in-from-top-1 duration-300">
+                <label className="text-[9px] font-black uppercase text-amber-500 ml-1">Motivo da Parada:</label>
+                <textarea 
+                  value={motivoParada} 
+                  onChange={(e) => setMotivoParada(e.target.value)} 
+                  placeholder="Descreva o porquê do serviço estar parado..."
+                  className={`w-full rounded-xl p-3 text-sm font-bold outline-none border transition-all min-h-[80px] ${clean ? 'bg-slate-50 border-slate-200 focus:border-amber-500 text-slate-900' : 'bg-[#111c2e] border-slate-700 focus:border-amber-500 text-white'}`} 
+                />
+                <button 
+                  onClick={() => atualizarStatusExecucao('Parado')} 
+                  className="w-full py-2 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-lg text-[9px] font-black uppercase"
+                >
+                  Salvar Motivo
+                </button>
               </div>
             )}
           </section>
@@ -417,21 +436,21 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* DADOS DE FATURAMENTO */}
+        {/* FATURAMENTO */}
         {exibirFaturamento && (
           <section className={`rounded-3xl p-6 mb-8 border shadow-lg transition-all duration-500 ${ordem.status === 'Finalizado' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-blue-500/40 bg-blue-500/5'} ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
             <div className="flex items-center gap-2 mb-6">
               <CircleDollarSign size={20} className={ordem.status === 'Finalizado' ? 'text-emerald-500' : 'text-blue-500'} />
-              <h2 className="font-black uppercase tracking-tighter">Dados de Faturamento</h2>
+              <h2 className="font-black uppercase tracking-tighter">Faturamento</h2>
             </div>
             <div className="space-y-4">
               <input type="text" value={numPedido} onChange={(e) => setNumPedido(e.target.value)} placeholder="Número do Pedido"
-                className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900' : 'bg-[#111c2e] border-slate-700 focus:border-blue-500 text-white'}`} />
+                className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white'}`} />
               <input type="text" value={numOSFaturam} onChange={(e) => setNumOSFaturam(e.target.value)} placeholder="Número da OS (Sistema)"
-                className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900' : 'bg-[#111c2e] border-slate-700 focus:border-blue-500 text-white'}`} />
-              <button onClick={salvarDadosFaturamento} disabled={salvandoDadosExtras} className={`w-full py-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 ${ordem.status === 'Finalizado' ? 'bg-emerald-500' : 'bg-blue-600'}`}>
+                className={`w-full rounded-2xl p-4 text-sm font-bold outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white'}`} />
+              <button onClick={salvarDadosFaturamento} disabled={salvandoDadosExtras} className={`w-full py-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${ordem.status === 'Finalizado' ? 'bg-emerald-500' : 'bg-blue-600'}`}>
                 {salvandoDadosExtras ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                Salvar Dados Faturamento
+                Salvar Dados
               </button>
             </div>
           </section>
@@ -444,7 +463,7 @@ export default function DetalhesOSPage() {
               <XCircle size={28} className="mb-2" />
               <span className="text-[10px] font-black uppercase">Cancelar OS</span>
             </button>
-            <button onClick={() => alterarStatus('Finalizado')} className="flex flex-col items-center justify-center p-5 rounded-3xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+            <button onClick={() => alterarStatus('Finalizado')} className="flex flex-col items-center justify-center p-5 rounded-3xl bg-emerald-500 text-white shadow-lg active:scale-95 transition-all">
               <CheckCircle2 size={28} className="mb-2" />
               <span className="text-[10px] font-black uppercase">Finalizar OS</span>
             </button>
@@ -464,8 +483,8 @@ export default function DetalhesOSPage() {
 
       {/* MODAL DE EDIÇÃO DOS DADOS DA OS */}
       {modalEdicao && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[101] flex items-center justify-center p-6 animate-in fade-in duration-300">
-            <div className={`w-full max-w-sm rounded-[32px] p-8 border shadow-2xl ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-700'}`}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[101] flex items-center justify-center p-6">
+            <div className={`w-full max-w-sm rounded-[32px] p-8 border shadow-2xl animate-in zoom-in-95 duration-200 ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-700'}`}>
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-black uppercase italic">Editar Dados</h2>
                     <button onClick={() => setModalEdicao(false)} className="text-slate-500"><X size={24}/></button>
@@ -505,10 +524,10 @@ export default function DetalhesOSPage() {
             </div>
             <div className="space-y-4">
               <textarea placeholder="O que foi feito?" value={descricaoAtualizacao} onChange={(e) => setDescricaoAtualizacao(e.target.value)}
-                className={`w-full rounded-2xl p-4 text-sm font-medium outline-none min-h-[120px] border transition-all ${clean ? 'bg-slate-50 border-slate-200 focus:border-blue-500' : 'bg-[#111c2e] border-slate-700 focus:border-blue-500'}`} />
+                className={`w-full rounded-2xl p-4 text-sm font-medium outline-none min-h-[120px] border transition-all ${clean ? 'bg-slate-50 border-slate-200' : 'bg-[#111c2e] border-slate-700'}`} />
               <input placeholder="Técnico responsável" value={tecnicosResponsaveis} onChange={(e) => setTecnicosResponsaveis(e.target.value)}
-                className={`w-full rounded-2xl p-4 text-sm font-medium outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200 focus:border-blue-500' : 'bg-[#111c2e] border-slate-700 focus:border-blue-500'}`} />
-              <button onClick={salvarAtualizacao} disabled={salvandoAtualizacao} className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 disabled:opacity-50 transition-all">
+                className={`w-full rounded-2xl p-4 text-sm font-medium outline-none border transition-all ${clean ? 'bg-slate-50 border-slate-200' : 'bg-[#111c2e] border-slate-700'}`} />
+              <button onClick={salvarAtualizacao} disabled={salvandoAtualizacao} className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 transition-all">
                 {salvandoAtualizacao ? 'Gravando...' : 'Salvar Relatório'}
               </button>
             </div>
