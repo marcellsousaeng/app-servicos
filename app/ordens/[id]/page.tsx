@@ -75,14 +75,13 @@ export default function DetalhesOSPage() {
   const [numOSFaturam, setNumOSFaturam] = useState('')
   const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
 
-  // ESTADOS DE CONTROLE (BARRA DE TÉCNICO E PARADA)
+  // ESTADOS DE CONTROLE DE OPERAÇÃO
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
   const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
   const [motivoParada, setMotivoParada] = useState('')
   const [mostrarCampoParada, setMostrarCampoParada] = useState(false)
   const [atualizandoStatusRapido, setAtualizandoStatusRapido] = useState(false)
 
-  // Estados para Edição da OS
   const [modalEdicao, setModalEdicao] = useState(false)
   const [editForm, setEditForm] = useState({
     cliente: '',
@@ -106,8 +105,6 @@ export default function DetalhesOSPage() {
     setOrdem(osData)
     setNumPedido(osData.numero_pedido_faturamento || '')
     setNumOSFaturam(osData.numero_os_faturamento || '')
-    setMotivoParada(osData.motivo_parada || '')
-    setTecnicoAtuante(osData.usuario_responsavel || '')
     
     setEditForm({
       cliente: osData.cliente || '',
@@ -128,37 +125,38 @@ export default function DetalhesOSPage() {
     setCarregando(false)
   }
 
-  // FUNÇÃO DE ATUALIZAÇÃO REVISADA
+  // FUNÇÃO DE ATUALIZAÇÃO COM CAMPOS RESETADOS
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
     
-    // Se clicou em "Em andamento"
+    // Se clicou no botão principal de "Andamento"
     if (novoStatus === 'Em andamento') {
         if (!mostrarCampoAndamento) {
             setMostrarCampoAndamento(true)
-            setMostrarCampoParada(false) // fecha a outra barra se estiver aberta
+            setMostrarCampoParada(false)
+            setTecnicoAtuante('') // Garante que o campo venha em branco
             return 
         }
         if (!tecnicoAtuante.trim()) {
-            alert("Digite o nome do(s) técnico(s) para continuar.");
+            alert("Por favor, digite o nome do técnico.");
             return
         }
     }
 
-    // Se clicou em "Parado"
+    // Se clicou no botão principal de "Parado"
     if (novoStatus === 'Parado') {
         if (!mostrarCampoParada) {
             setMostrarCampoParada(true)
-            setMostrarCampoAndamento(false) // fecha a outra barra se estiver aberta
+            setMostrarCampoAndamento(false)
+            setMotivoParada('') // Garante que o campo venha em branco
             return 
         }
         if (!motivoParada.trim()) {
-            alert("Digite o motivo da parada para continuar.");
+            alert("Por favor, digite o motivo da parada.");
             return
         }
     }
 
-    // A partir daqui, o usuário clicou no botão "Confirmar" da barra aberta
     setAtualizandoStatusRapido(true)
     
     const { error } = await supabase
@@ -175,8 +173,8 @@ export default function DetalhesOSPage() {
       await supabase.from('os_atualizacoes').insert([{
         ordem_servico_id: ordem.id,
         descricao: novoStatus === 'Em andamento' 
-          ? `EXECUTANDO: Serviço assumido por ${tecnicoAtuante}` 
-          : `PARALISADO: ${motivoParada}`,
+          ? `EXECUTANDO: Serviço iniciado por ${tecnicoAtuante}` 
+          : `PARALISADO: Motivo informado: ${motivoParada}`,
         usuario_nome: 'SISTEMA'
       }])
 
@@ -265,7 +263,7 @@ export default function DetalhesOSPage() {
 
   if (carregando) return (
     <div className={`min-h-screen flex items-center justify-center font-bold ${clean ? 'bg-slate-50 text-slate-400' : 'bg-[#07111f] text-blue-500'}`}>
-      Sincronizando...
+      Carregando detalhes...
     </div>
   )
 
@@ -300,7 +298,7 @@ export default function DetalhesOSPage() {
           )}
         </div>
 
-        {/* CONTROLE DE OPERAÇÃO - ÁREA DA BARRA DE TÉCNICO */}
+        {/* CONTROLE DE OPERAÇÃO */}
         {!encerrada && (
           <section className={`rounded-3xl p-5 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
             <div className="flex items-center gap-2 mb-4">
@@ -326,15 +324,15 @@ export default function DetalhesOSPage() {
               </button>
             </div>
 
-            {/* BARRA PARA PREENCHER TÉCNICO */}
+            {/* BARRA TÉCNICO - VEM EM BRANCO */}
             {mostrarCampoAndamento && (
               <div className="mt-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 space-y-3 animate-in fade-in zoom-in duration-200">
-                <p className="text-[9px] font-black uppercase text-blue-500 italic">Informe o(s) técnico(s) atuante(s):</p>
+                <p className="text-[9px] font-black uppercase text-blue-500 italic">Quem está executando agora?</p>
                 <input 
                   type="text" 
                   value={tecnicoAtuante} 
                   onChange={(e) => setTecnicoAtuante(e.target.value)}
-                  placeholder="Nome do técnico..."
+                  placeholder="Digite o nome..."
                   className={`w-full p-3 rounded-xl text-sm font-bold border outline-none ${clean ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-slate-700'}`}
                 />
                 <button 
@@ -343,19 +341,19 @@ export default function DetalhesOSPage() {
                   className="w-full py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2"
                 >
                   {atualizandoStatusRapido ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Confirmar Início
+                  Confirmar e Iniciar
                 </button>
               </div>
             )}
 
-            {/* BARRA PARA PREENCHER MOTIVO DA PARADA */}
+            {/* BARRA PARADA - VEM EM BRANCO */}
             {mostrarCampoParada && (
               <div className="mt-4 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3 animate-in fade-in zoom-in duration-200">
                 <p className="text-[9px] font-black uppercase text-amber-500 italic">Qual o motivo da parada?</p>
                 <textarea 
                   value={motivoParada} 
                   onChange={(e) => setMotivoParada(e.target.value)}
-                  placeholder="Ex: Aguardando peça, horário almoço..."
+                  placeholder="Descreva aqui..."
                   className={`w-full p-3 rounded-xl text-sm font-bold border outline-none min-h-[80px] ${clean ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-slate-700'}`}
                 />
                 <button 
@@ -377,7 +375,7 @@ export default function DetalhesOSPage() {
             <InfoItem clean={clean} Icone={User} titulo="Cliente" texto={ordem.cliente} />
             <InfoItem clean={clean} Icone={Monitor} titulo="Máquina" texto={ordem.maquina} />
             <InfoItem clean={clean} Icone={Users} titulo="Solicitante" texto={ordem.solicitante || '-'} />
-            <InfoItem clean={clean} Icone={User} titulo="Técnico" texto={ordem.usuario_responsavel || '-'} />
+            <InfoItem clean={clean} Icone={User} titulo="Técnico Atual" texto={ordem.usuario_responsavel || '-'} />
             <InfoItem clean={clean} Icone={FileText} titulo="Descrição" texto={ordem.descricao} full />
           </div>
         </section>
@@ -386,17 +384,17 @@ export default function DetalhesOSPage() {
         <section className={`rounded-3xl p-6 mb-5 border shadow-sm ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
           <div className="flex items-center gap-2 mb-4">
             <Camera size={20} className="text-blue-500" />
-            <h2 className="font-black uppercase tracking-tighter">Galeria de Fotos</h2>
+            <h2 className="font-black uppercase tracking-tighter">Fotos</h2>
           </div>
           {!encerrada && (
             <div className="flex gap-2 mb-4">
               <label className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl cursor-pointer shadow-md">
                 <Camera size={16} /> <span className="text-[10px] font-black">Câmera</span>
-                <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddFoto} disabled={enviandoFoto} />
+                <input type="file" hidden accept="image/*" capture="environment" onChange={handleAddFoto} />
               </label>
-              <label className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl cursor-pointer ${clean ? 'bg-slate-100' : 'bg-slate-700/50 text-slate-200'}`}>
-                <FolderOpen size={16} /> <span className="text-[10px] font-black">Arquivo</span>
-                <input type="file" multiple hidden accept="image/*" onChange={handleAddFoto} disabled={enviandoFoto} />
+              <label className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl cursor-pointer ${clean ? 'bg-slate-100' : 'bg-slate-700/50'}`}>
+                <FolderOpen size={16} /> <span className="text-[10px] font-black">Galeria</span>
+                <input type="file" multiple hidden accept="image/*" onChange={handleAddFoto} />
               </label>
             </div>
           )}
@@ -411,12 +409,12 @@ export default function DetalhesOSPage() {
         <div className="mb-6">
           {!encerrada && (
             <button onClick={() => router.push(`/ordens/${id_os}/material`)} className={`w-full py-4 mb-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 ${clean ? 'border-blue-500/30 text-blue-600' : 'border-blue-500/20 text-blue-400'}`}>
-              <Plus size={20} /> <span className="font-black uppercase">Acrescentar Material</span>
+              <Plus size={20} /> <span className="font-black uppercase text-xs">Acrescentar Material</span>
             </button>
           )}
           {materiais.length > 0 && (
             <div className={`rounded-3xl p-6 border ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
-              <h2 className="font-black uppercase text-xs mb-4">Peças Utilizadas</h2>
+              <h2 className="font-black uppercase text-xs mb-4">Peças / Materiais</h2>
               <div className="space-y-2">
                 {materiais.map((m) => (
                   <div key={m.id} className="flex justify-between items-center p-3 bg-slate-500/5 rounded-xl border border-white/5">
@@ -429,7 +427,7 @@ export default function DetalhesOSPage() {
           )}
         </div>
 
-        {/* MÃO DE OBRA / HISTÓRICO */}
+        {/* HISTÓRICO / MÃO DE OBRA */}
         <section className={`rounded-3xl p-6 mb-8 border ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
           <div className="flex items-center gap-2 mb-6 border-b border-slate-500/10 pb-4">
             <FileText size={20} className="text-purple-500" />
@@ -452,7 +450,7 @@ export default function DetalhesOSPage() {
         {/* FATURAMENTO */}
         {exibirFaturamento && (
           <section className={`rounded-3xl p-6 mb-8 border ${ordem.status === 'Finalizado' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-blue-500/40 bg-blue-500/5'} ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
-            <h2 className="font-black uppercase text-xs mb-4">Dados de Faturamento</h2>
+            <h2 className="font-black uppercase text-xs mb-4">Faturamento</h2>
             <div className="space-y-4">
               <input type="text" value={numPedido} onChange={(e) => setNumPedido(e.target.value)} placeholder="Nº Pedido" className={`w-full rounded-xl p-4 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
               <input type="text" value={numOSFaturam} onChange={(e) => setNumOSFaturam(e.target.value)} placeholder="Nº OS Sistema" className={`w-full rounded-xl p-4 text-sm font-bold border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
@@ -461,7 +459,7 @@ export default function DetalhesOSPage() {
           </section>
         )}
 
-        {/* FINALIZAR */}
+        {/* FINALIZAR / CANCELAR */}
         {!encerrada && (
           <div className="grid grid-cols-2 gap-4 mb-10">
             <button onClick={() => alterarStatus('Cancelado')} className="flex flex-col items-center p-5 rounded-3xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
@@ -500,7 +498,7 @@ export default function DetalhesOSPage() {
         </div>
       )}
 
-      {/* MODAL RELATO */}
+      {/* MODAL RELATO AVULSO */}
       {modalAtualizacao && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end">
           <div className={`w-full max-w-md mx-auto rounded-t-[40px] p-8 pb-10 border-t ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-700'}`}>
