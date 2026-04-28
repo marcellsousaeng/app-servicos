@@ -83,17 +83,19 @@ export default function DashboardPage() {
       andamento: lista.filter(o => o.status === 'Em andamento').length,
       parado: lista.filter(o => o.status === 'Parado').length,
       finalizado: lista.filter(o => o.status === 'Finalizado').length,
-      cancelado: lista.filter(o => o.status === 'Cancelado').length
+      cancelado: lista.filter(o => o.status === 'Cancelado' || o.cancelada === true).length
     })
     setCarregando(false)
   }
 
   const clean = tema === 'clean'
 
+  // LÓGICA DE FILTRO CORRIGIDA
   const ordensFiltradas = useMemo(() => {
     if (filtroStatus === 'em_andamento') return ordens.filter(o => o.status === 'Em andamento')
     if (filtroStatus === 'parado') return ordens.filter(o => o.status === 'Parado')
     if (filtroStatus === 'finalizado') return ordens.filter(o => o.status === 'Finalizado')
+    if (filtroStatus === 'cancelado') return ordens.filter(o => o.status === 'Cancelado' || o.cancelada === true)
     return ordens
   }, [ordens, filtroStatus])
 
@@ -152,12 +154,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* INDICADORES */}
+        {/* INDICADORES COM FILTROS AJUSTADOS */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <CardMini clean={clean} titulo="Em Execução" valor={contadores.andamento} Icone={Play} cor="blue" onClick={() => setFiltroStatus('em_andamento')} />
           <CardMini clean={clean} titulo="Paradas" valor={contadores.parado} Icone={Pause} cor="amber" onClick={() => setFiltroStatus('parado')} />
           <CardMini clean={clean} titulo="Finalizadas" valor={contadores.finalizado} Icone={CheckCircle2} cor="emerald" onClick={() => setFiltroStatus('finalizado')} />
-          <CardMini clean={clean} titulo="Total / Canc." valor={contadores.cancelado} Icone={XCircle} cor="rose" onClick={() => setFiltroStatus('todas')} />
+          <CardMini clean={clean} titulo="Canceladas" valor={contadores.cancelado} Icone={XCircle} cor="rose" onClick={() => setFiltroStatus('cancelado')} />
         </div>
 
         {/* LISTAGEM RECENTE / FILTRADA */}
@@ -166,7 +168,9 @@ export default function DashboardPage() {
         }`}>
           <div className="p-5 flex items-center justify-between border-b border-white/5">
             <h2 className="font-black text-lg uppercase tracking-tight">
-              {filtroStatus === 'todas' ? 'Recentes' : filtroStatus === 'parado' ? 'OS Paradas' : 'Resultado'}
+              {filtroStatus === 'todas' ? 'Recentes' : 
+               filtroStatus === 'parado' ? 'OS Paradas' : 
+               filtroStatus === 'cancelado' ? 'OS Canceladas' : 'Resultado'}
             </h2>
             {filtroStatus !== 'todas' && (
               <button onClick={() => setFiltroStatus('todas')} className="text-[10px] font-black text-blue-500 uppercase bg-blue-500/10 px-2 py-1 rounded-lg">
@@ -199,6 +203,8 @@ export default function DashboardPage() {
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
                       ordem.status === 'Finalizado' 
                         ? 'bg-emerald-500/10 text-emerald-500' 
+                        : (ordem.status === 'Cancelado' || ordem.cancelada)
+                        ? 'bg-rose-500/10 text-rose-500'
                         : ordem.status === 'Parado'
                         ? 'bg-amber-500 text-white'
                         : 'bg-blue-500/10 text-blue-500'
