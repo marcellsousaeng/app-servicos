@@ -210,9 +210,21 @@ export default function DashboardPage() {
                   <p className="text-xs opacity-50 truncate uppercase mb-1">
                     {ordem.maquina || 'MAQUINA NÃO INF.' }
                   </p>
+
+                  {/* EXIBIÇÃO DO TÉCNICO EM ANDAMENTO */}
+                  {ordem.status === 'Em andamento' && ordem.usuario_responsavel && (
+                    <div className="mt-2 p-2 bg-blue-500/5 border border-blue-500/20 rounded-lg flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                      <p className="text-[10px] font-black uppercase text-blue-500">
+                        Executando: <span className="opacity-80 font-bold">{ordem.usuario_responsavel}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* EXIBIÇÃO DO MOTIVO SE PARADO */}
                   {ordem.status === 'Parado' && ordem.motivo_parada && (
                     <div className="mt-2 p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                      <p className="text-[9px] font-black uppercase text-amber-500">Motivo:</p>
+                      <p className="text-[9px] font-black uppercase text-amber-500">Motivo da Parada:</p>
                       <p className="text-[11px] font-bold italic opacity-80">"{ordem.motivo_parada}"</p>
                     </div>
                   )}
