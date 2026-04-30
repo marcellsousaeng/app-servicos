@@ -64,6 +64,7 @@ export default function DetalhesOSPage() {
   const [materiais, setMateriais] = useState<Material[]>([])
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
+  const [perfilUsuario, setPerfilUsuario] = useState<string | null>(null)
   
   const [descricaoAtualizacao, setDescricaoAtualizacao] = useState('')
   const [tecnicosResponsaveis, setTecnicosResponsaveis] = useState('')
@@ -75,7 +76,6 @@ export default function DetalhesOSPage() {
   const [numOSFaturam, setNumOSFaturam] = useState('')
   const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
 
-  // ESTADOS DE CONTROLE DE OPERAÇÃO
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
   const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
   const [motivoParada, setMotivoParada] = useState('')
@@ -99,6 +99,18 @@ export default function DetalhesOSPage() {
 
   async function carregarDados() {
     const id = Number(id_os)
+    
+    // Buscar perfil do usuário logado
+    const usuarioLogado = localStorage.getItem('usuario')
+    if (usuarioLogado) {
+        const { data: userData } = await supabase
+            .from('usuarios')
+            .select('perfil')
+            .eq('usuario', usuarioLogado)
+            .single()
+        if (userData) setPerfilUsuario(userData.perfil)
+    }
+
     const { data: osData } = await supabase.from('ordens_servico').select('*').eq('id', id).single()
     if (!osData) return setCarregando(false)
     
@@ -125,16 +137,20 @@ export default function DetalhesOSPage() {
     setCarregando(false)
   }
 
-  // FUNÇÃO DE ATUALIZAÇÃO COM CAMPOS RESETADOS
+  // Lógica de permissão especial
+  const podeEditarSempre = perfilUsuario && [
+    'Engenheiro', 
+    'Diretor', 
+    'Encarregado de Produção'
+  ].includes(perfilUsuario)
+
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
-    
-    // Se clicou no botão principal de "Andamento"
     if (novoStatus === 'Em andamento') {
         if (!mostrarCampoAndamento) {
             setMostrarCampoAndamento(true)
             setMostrarCampoParada(false)
-            setTecnicoAtuante('') // Garante que o campo venha em branco
+            setTecnicoAtuante('')
             return 
         }
         if (!tecnicoAtuante.trim()) {
@@ -143,12 +159,11 @@ export default function DetalhesOSPage() {
         }
     }
 
-    // Se clicou no botão principal de "Parado"
     if (novoStatus === 'Parado') {
         if (!mostrarCampoParada) {
             setMostrarCampoParada(true)
             setMostrarCampoAndamento(false)
-            setMotivoParada('') // Garante que o campo venha em branco
+            setMotivoParada('')
             return 
         }
         if (!motivoParada.trim()) {
@@ -158,7 +173,6 @@ export default function DetalhesOSPage() {
     }
 
     setAtualizandoStatusRapido(true)
-    
     const { error } = await supabase
       .from('ordens_servico')
       .update({ 
@@ -169,7 +183,6 @@ export default function DetalhesOSPage() {
       .eq('id', ordem.id)
 
     if (!error) {
-      // Registrar no Histórico / Mão de Obra
       await supabase.from('os_atualizacoes').insert([{
         ordem_servico_id: ordem.id,
         descricao: novoStatus === 'Em andamento' 
@@ -177,7 +190,6 @@ export default function DetalhesOSPage() {
           : `PARALISADO: Motivo informado: ${motivoParada}`,
         usuario_nome: 'SISTEMA'
       }])
-
       setMostrarCampoParada(false)
       setMostrarCampoAndamento(false)
       await carregarDados()
@@ -195,7 +207,12 @@ export default function DetalhesOSPage() {
         descricao: editForm.descricao
       }).eq('id', ordem.id)
 
-    if (!error) { setModalEdicao(false); carregarDados() }
+    if (!error) { 
+        setModalEdicao(false)
+        carregarDados() 
+    } else {
+        alert("Erro ao salvar edição")
+    }
     setSalvandoEdicao(false)
   }
 
@@ -284,7 +301,8 @@ export default function DetalhesOSPage() {
                 <span className={badgeEstilo(ordem.status)}>
                 {ordem.status}
                 </span>
-                {!encerrada && (
+                {/* BOTÃO EDITAR: Aparece se não encerrada OU se for perfil Engenheiro/Diretor/Encarregado */}
+                {(!encerrada || podeEditarSempre) && (
                     <button onClick={() => setModalEdicao(true)} className="p-1 text-blue-500 active:scale-90 transition-transform">
                         <Pencil size={14} />
                     </button>
@@ -324,7 +342,6 @@ export default function DetalhesOSPage() {
               </button>
             </div>
 
-            {/* BARRA TÉCNICO - VEM EM BRANCO */}
             {mostrarCampoAndamento && (
               <div className="mt-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 space-y-3 animate-in fade-in zoom-in duration-200">
                 <p className="text-[9px] font-black uppercase text-blue-500 italic">Quem está executando agora?</p>
@@ -346,7 +363,6 @@ export default function DetalhesOSPage() {
               </div>
             )}
 
-            {/* BARRA PARADA - VEM EM BRANCO */}
             {mostrarCampoParada && (
               <div className="mt-4 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3 animate-in fade-in zoom-in duration-200">
                 <p className="text-[9px] font-black uppercase text-amber-500 italic">Qual o motivo da parada?</p>
@@ -489,9 +505,12 @@ export default function DetalhesOSPage() {
                 <h2 className="text-lg font-black uppercase italic mb-6">Editar OS</h2>
                 <div className="space-y-4">
                     <input value={editForm.cliente} onChange={(e) => setEditForm({...editForm, cliente: e.target.value})} placeholder="Cliente" className={`w-full rounded-xl p-3 border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
+                    <input value={editForm.solicitante} onChange={(e) => setEditForm({...editForm, solicitante: e.target.value})} placeholder="Solicitante" className={`w-full rounded-xl p-3 border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
                     <input value={editForm.maquina} onChange={(e) => setEditForm({...editForm, maquina: e.target.value})} placeholder="Máquina" className={`w-full rounded-xl p-3 border outline-none ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
                     <textarea value={editForm.descricao} onChange={(e) => setEditForm({...editForm, descricao: e.target.value})} placeholder="Descrição" className={`w-full rounded-xl p-3 border outline-none min-h-[100px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e]'}`} />
-                    <button onClick={salvarEdicaoOS} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-white shadow-lg">Salvar</button>
+                    <button onClick={salvarEdicaoOS} disabled={salvandoEdicao} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-white shadow-lg flex items-center justify-center">
+                        {salvandoEdicao ? <Loader2 className="animate-spin" /> : 'Salvar Alterações'}
+                    </button>
                     <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold text-slate-500 uppercase">Fechar</button>
                 </div>
             </div>
