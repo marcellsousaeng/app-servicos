@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import { 
-  ChevronLeft, Plus, ClipboardList, User, Monitor, 
-  FileText, Camera, Search, Users, LayoutGrid, 
-  CircleDollarSign, Settings, X, Layers, CheckCircle2, XCircle, Loader2, FolderOpen,
+  ChevronLeft, ClipboardList, User, Monitor, 
+  FileText, Camera, Users, LayoutGrid, 
+  CircleDollarSign, Settings, CheckCircle2, XCircle, Loader2, FolderOpen,
   PlayCircle, PauseCircle, Pencil
 } from 'lucide-react'
 
@@ -37,10 +37,6 @@ type Material = {
   id: string
   tipo: string
   descricao: string
-  espessura: string
-  diametro: string
-  comprimento: string
-  largura: string
   quantidade: string
 }
 
@@ -66,18 +62,15 @@ export default function DetalhesOSPage() {
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
   const [perfilUsuario, setPerfilUsuario] = useState<string | null>(null)
   
-  const [descricaoAtualizacao, setDescricaoAtualizacao] = useState('')
-  const [tecnicosResponsaveis, setTecnicosResponsaveis] = useState('')
-  const [salvandoAtualizacao, setSalvandoAtualizacao] = useState(false)
-  const [modalAtualizacao, setModalAtualizacao] = useState(false)
-  const [enviandoFoto, setEnviandoFoto] = useState(false)
-
   const [numPedido, setNumPedido] = useState('')
   const [numOSFaturam, setNumOSFaturam] = useState('')
   const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
 
+  // Estados para Controle de Operação
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
+  const [atividadeExecutada, setAtividadeExecutada] = useState('')
   const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
+  
   const [motivoParada, setMotivoParada] = useState('')
   const [mostrarCampoParada, setMostrarCampoParada] = useState(false)
   const [atualizandoStatusRapido, setAtualizandoStatusRapido] = useState(false)
@@ -99,9 +92,8 @@ export default function DetalhesOSPage() {
 
   async function carregarDados() {
     const id = Number(id_os)
-    
-    // Buscar perfil do usuário logado
     const usuarioLogado = localStorage.getItem('usuario')
+    
     if (usuarioLogado) {
         const { data: userData } = await supabase
             .from('usuarios')
@@ -137,24 +129,21 @@ export default function DetalhesOSPage() {
     setCarregando(false)
   }
 
-  // Lógica de permissão especial
   const podeEditarSempre = perfilUsuario && [
-    'Engenheiro', 
-    'Diretor', 
-    'Encarregado de Produção'
+    'Engenheiro', 'Diretor', 'Encarregado de Produção'
   ].includes(perfilUsuario)
 
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
+    
     if (novoStatus === 'Em andamento') {
         if (!mostrarCampoAndamento) {
             setMostrarCampoAndamento(true)
             setMostrarCampoParada(false)
-            setTecnicoAtuante('')
             return 
         }
-        if (!tecnicoAtuante.trim()) {
-            alert("Por favor, digite o nome do técnico.");
+        if (!tecnicoAtuante.trim() || !atividadeExecutada.trim()) {
+            alert("Por favor, preencha o nome do técnico e a atividade.");
             return
         }
     }
@@ -163,7 +152,6 @@ export default function DetalhesOSPage() {
         if (!mostrarCampoParada) {
             setMostrarCampoParada(true)
             setMostrarCampoAndamento(false)
-            setMotivoParada('')
             return 
         }
         if (!motivoParada.trim()) {
@@ -186,12 +174,15 @@ export default function DetalhesOSPage() {
       await supabase.from('os_atualizacoes').insert([{
         ordem_servico_id: ordem.id,
         descricao: novoStatus === 'Em andamento' 
-          ? `EXECUTANDO: Serviço iniciado por ${tecnicoAtuante}` 
-          : `PARALISADO: Motivo informado: ${motivoParada}`,
+          ? `EXECUTANDO: ${atividadeExecutada}` 
+          : `PARALISADO: ${motivoParada}`,
+        tecnicos_responsaveis: novoStatus === 'Em andamento' ? tecnicoAtuante : null,
         usuario_nome: 'SISTEMA'
       }])
+      
       setMostrarCampoParada(false)
       setMostrarCampoAndamento(false)
+      setAtividadeExecutada('')
       await carregarDados()
     }
     setAtualizandoStatusRapido(false)
@@ -210,8 +201,6 @@ export default function DetalhesOSPage() {
     if (!error) { 
         setModalEdicao(false)
         carregarDados() 
-    } else {
-        alert("Erro ao salvar edição")
     }
     setSalvandoEdicao(false)
   }
@@ -219,7 +208,6 @@ export default function DetalhesOSPage() {
   async function handleAddFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0 || !ordem) return
-    setEnviandoFoto(true)
     try {
       const uploads = Array.from(files).map(async (file) => {
         const nomeArquivo = `${ordem.id}/${Date.now()}-${file.name}`
@@ -230,27 +218,7 @@ export default function DetalhesOSPage() {
       })
       await Promise.all(uploads)
       carregarDados()
-    } catch (err) { alert("Erro ao enviar foto") } finally { setEnviandoFoto(false) }
-  }
-
-  async function salvarAtualizacao() {
-    if (!ordem || !descricaoAtualizacao.trim()) return
-    setSalvandoAtualizacao(true)
-    const usuarioSalvo = localStorage.getItem('usuario')
-    const { data: user } = await supabase.from('usuarios').select('nome').eq('usuario', usuarioSalvo).single()
-    
-    const { error } = await supabase.from('os_atualizacoes').insert([{
-      ordem_servico_id: ordem.id,
-      descricao: descricaoAtualizacao,
-      tecnicos_responsaveis: tecnicosResponsaveis,
-      usuario_nome: user?.nome || usuarioSalvo,
-    }])
-
-    if (!error) {
-      setDescricaoAtualizacao(''); setTecnicosResponsaveis('')
-      setModalAtualizacao(false); carregarDados()
-    }
-    setSalvandoAtualizacao(false)
+    } catch (err) { alert("Erro ao enviar foto") }
   }
 
   async function alterarStatus(novoStatus: string) {
@@ -299,9 +267,8 @@ export default function DetalhesOSPage() {
             <h1 className="text-lg font-black uppercase italic tracking-tighter">OS #{ordem.numero_os ?? ordem.id}</h1>
             <div className="flex items-center gap-2">
                 <span className={badgeEstilo(ordem.status)}>
-                {ordem.status}
+                    {ordem.status}
                 </span>
-                {/* BOTÃO EDITAR: Aparece se não encerrada OU se for perfil Engenheiro/Diretor/Encarregado */}
                 {(!encerrada || podeEditarSempre) && (
                     <button onClick={() => setModalEdicao(true)} className="p-1 text-blue-500 active:scale-90 transition-transform">
                         <Pencil size={14} />
@@ -309,11 +276,6 @@ export default function DetalhesOSPage() {
                 )}
             </div>
           </div>
-          {!encerrada && (
-            <button onClick={() => setModalAtualizacao(true)} className={`h-12 px-4 rounded-2xl flex items-center gap-2 text-xs font-black uppercase border shadow-lg transition-all ${clean ? 'bg-blue-600 border-blue-400 text-white' : 'bg-[#0d1726] border-blue-500/30 text-blue-400'}`}>
-              <Plus size={16} /> Relato
-            </button>
-          )}
         </div>
 
         {/* CONTROLE DE OPERAÇÃO */}
@@ -344,13 +306,19 @@ export default function DetalhesOSPage() {
 
             {mostrarCampoAndamento && (
               <div className="mt-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 space-y-3 animate-in fade-in zoom-in duration-200">
-                <p className="text-[9px] font-black uppercase text-blue-500 italic">Quem está executando agora?</p>
+                <p className="text-[9px] font-black uppercase text-blue-500 italic">Detalhes da Execução</p>
                 <input 
                   type="text" 
                   value={tecnicoAtuante} 
                   onChange={(e) => setTecnicoAtuante(e.target.value)}
-                  placeholder="Digite o nome..."
+                  placeholder="Nome do técnico..."
                   className={`w-full p-3 rounded-xl text-sm font-bold border outline-none ${clean ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-slate-700'}`}
+                />
+                <textarea 
+                  value={atividadeExecutada} 
+                  onChange={(e) => setAtividadeExecutada(e.target.value)}
+                  placeholder="O que está sendo feito?"
+                  className={`w-full p-3 rounded-xl text-sm font-bold border outline-none min-h-[80px] ${clean ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-slate-700'}`}
                 />
                 <button 
                   onClick={() => atualizarStatusExecucao('Em andamento')}
@@ -392,7 +360,7 @@ export default function DetalhesOSPage() {
             <InfoItem clean={clean} Icone={Monitor} titulo="Máquina" texto={ordem.maquina} />
             <InfoItem clean={clean} Icone={Users} titulo="Solicitante" texto={ordem.solicitante || '-'} />
             <InfoItem clean={clean} Icone={User} titulo="Técnico Atual" texto={ordem.usuario_responsavel || '-'} />
-            <InfoItem clean={clean} Icone={FileText} titulo="Descrição" texto={ordem.descricao} full />
+            <InfoItem clean={clean} Icone={FileText} titulo="Descrição Original" texto={ordem.descricao} full />
           </div>
         </section>
 
@@ -425,7 +393,7 @@ export default function DetalhesOSPage() {
         <div className="mb-6">
           {!encerrada && (
             <button onClick={() => router.push(`/ordens/${id_os}/material`)} className={`w-full py-4 mb-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 ${clean ? 'border-blue-500/30 text-blue-600' : 'border-blue-500/20 text-blue-400'}`}>
-              <Plus size={20} /> <span className="font-black uppercase text-xs">Acrescentar Material</span>
+              <span className="font-black uppercase text-xs">Acrescentar Material</span>
             </button>
           )}
           {materiais.length > 0 && (
@@ -443,7 +411,7 @@ export default function DetalhesOSPage() {
           )}
         </div>
 
-        {/* HISTÓRICO / MÃO DE OBRA */}
+        {/* HISTÓRICO DE ATIVIDADES */}
         <section className={`rounded-3xl p-6 mb-8 border ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
           <div className="flex items-center gap-2 mb-6 border-b border-slate-500/10 pb-4">
             <FileText size={20} className="text-purple-500" />
@@ -454,7 +422,7 @@ export default function DetalhesOSPage() {
               <div key={item.id} className="pl-8 relative">
                 <div className={`absolute left-1.5 top-1.5 w-3.5 h-3.5 rounded-full border-4 ${item.usuario_nome === 'SISTEMA' ? 'bg-amber-500' : 'bg-purple-500'} ${clean ? 'border-white' : 'border-[#0d1726]'}`} />
                 <div className="flex justify-between">
-                  <p className="font-black text-[10px] uppercase text-blue-500">{item.usuario_nome}</p>
+                  <p className="font-black text-[10px] uppercase text-blue-500">{item.tecnicos_responsaveis || item.usuario_nome}</p>
                   <span className="text-[9px] opacity-40">{new Date(item.created_at).toLocaleDateString()}</span>
                 </div>
                 <p className="text-sm font-medium mt-1">{item.descricao}</p>
@@ -514,20 +482,6 @@ export default function DetalhesOSPage() {
                     <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold text-slate-500 uppercase">Fechar</button>
                 </div>
             </div>
-        </div>
-      )}
-
-      {/* MODAL RELATO AVULSO */}
-      {modalAtualizacao && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end">
-          <div className={`w-full max-w-md mx-auto rounded-t-[40px] p-8 pb-10 border-t ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-700'}`}>
-            <h2 className="text-xl font-black uppercase italic mb-8">Novo Relato</h2>
-            <div className="space-y-4">
-              <textarea placeholder="O que foi feito?" value={descricaoAtualizacao} onChange={(e) => setDescricaoAtualizacao(e.target.value)} className={`w-full rounded-2xl p-4 text-sm outline-none border min-h-[120px] ${clean ? 'bg-slate-50' : 'bg-[#111c2e] border-slate-700'}`} />
-              <button onClick={salvarAtualizacao} className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase text-white shadow-lg">Salvar Relatório</button>
-              <button onClick={() => setModalAtualizacao(false)} className="w-full text-xs font-bold text-slate-500 uppercase">Cancelar</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
