@@ -18,7 +18,7 @@ export default function FaturamentoPage() {
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
   
-  // Estados do Modal
+  // Estados do Modal de Gerenciamento
   const [modalAberto, setModalAberto] = useState(false)
   const [osSelecionada, setOsSelecionada] = useState<any>(null)
   const [unidade, setUnidade] = useState('')
@@ -57,7 +57,7 @@ export default function FaturamentoPage() {
   const clean = tema === 'clean'
 
   const prepararFaturamento = (e: React.MouseEvent, ordem: any) => {
-    e.stopPropagation() 
+    e.stopPropagation() // Impede de abrir o relatório ao clicar no botão
     setOsSelecionada(ordem)
     setUnidade(ordem.unidade_faturamento || 'TORNEARIA DIVISA')
     setNumPedido(ordem.numero_pedido_faturamento || '')
@@ -119,7 +119,7 @@ export default function FaturamentoPage() {
             </button>
             <div>
                <h1 className="text-xl font-black uppercase tracking-tight">Faturamento</h1>
-               <p className="text-[10px] font-bold opacity-40 uppercase">Apenas Pendentes/Faturados</p>
+               <p className="text-[10px] font-bold opacity-40 uppercase">Controle de Saída</p>
             </div>
           </div>
         </header>
@@ -138,7 +138,7 @@ export default function FaturamentoPage() {
         {/* LISTAGEM */}
         <div className="space-y-4">
           {carregando ? (
-            <div className="py-20 text-center opacity-50 italic">Carregando...</div>
+            <div className="py-20 text-center opacity-50 italic">Carregando ordens...</div>
           ) : ordensFiltradas.map((ordem) => (
             <div 
               key={ordem.id} 
@@ -161,10 +161,16 @@ export default function FaturamentoPage() {
               <h3 className="font-black text-base uppercase mb-1 truncate">{ordem.cliente}</h3>
               <p className="text-xs font-bold opacity-50 mb-5 truncate uppercase">{ordem.maquina}</p>
 
-              {(ordem.numero_pedido_faturamento || ordem.valor_faturamento > 0) && (
+              {/* RESUMO DOS DADOS NO CARD */}
+              {(ordem.numero_pedido_faturamento || ordem.numero_os_faturamento || (ordem.valor_faturamento > 0)) && (
                 <div className={`mb-5 p-4 rounded-2xl border flex flex-col gap-3 ${clean ? 'bg-slate-50 border-slate-100' : 'bg-white/5 border-white/10'}`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase text-blue-500">{ordem.unidade_faturamento}</span>
+                    <div className="flex items-center gap-2">
+                      <Store size={14} className="text-blue-500" />
+                      <span className="text-[10px] font-black uppercase tracking-tighter">
+                        {ordem.unidade_faturamento || '---'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-1 text-emerald-500">
                       <DollarSign size={14} />
                       <span className="text-xs font-black">
@@ -172,33 +178,60 @@ export default function FaturamentoPage() {
                       </span>
                     </div>
                   </div>
+                  <div className="flex gap-4 border-t border-white/5 pt-2">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] uppercase font-bold opacity-40">Pedido</span>
+                      <span className="text-[10px] font-black">{ordem.numero_pedido_faturamento || '---'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[8px] uppercase font-bold opacity-40">OS Sistema</span>
+                      <span className="text-[10px] font-black">{ordem.numero_os_faturamento || '---'}</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
               <button 
                 onClick={(e) => prepararFaturamento(e, ordem)}
-                className="w-full py-4 rounded-xl bg-blue-600/10 text-blue-500 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all"
+                className="w-full py-4 rounded-xl bg-blue-600/10 text-blue-500 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95"
               >
-                {ehFaturamento ? 'Alterar Status' : 'Ver Dados'}
+                {ehFaturamento ? 'Gerenciar Faturamento' : 'Ver Dados de Venda'}
               </button>
             </div>
           ))}
         </div>
       </main>
 
-      {/* MODAL */}
+      {/* MODAL DE GERENCIAMENTO */}
       {modalAberto && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setModalAberto(false)}>
           <div 
             onClick={e => e.stopPropagation()}
-            className={`w-full max-w-sm rounded-[2.5rem] p-8 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}
+            className={`w-full max-w-sm rounded-[2.5rem] p-8 max-h-[90vh] overflow-y-auto ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="font-black text-lg uppercase tracking-tight">Faturamento</h2>
+              <h2 className="font-black text-lg uppercase tracking-tight">Gerenciar Faturamento</h2>
               <button onClick={() => setModalAberto(false)}><XCircle size={24} className="opacity-30" /></button>
             </div>
 
             <div className="space-y-4">
+              {/* Unidade Faturadora */}
+              <div>
+                <label className="text-[9px] font-black uppercase opacity-40 ml-1">Unidade Faturadora</label>
+                <div className="grid grid-cols-2 gap-2 mt-1.5">
+                  {['TORNEARIA DIVISA', 'DIVISA IMPLEMENTOS'].map(u => (
+                    <button 
+                      key={u}
+                      onClick={() => setUnidade(u)}
+                      className={`py-3 rounded-xl text-[9px] font-black border transition-all ${unidade === u ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-700 opacity-40'}`}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status */}
               {ehFaturamento && (
                 <div>
                   <label className="text-[9px] font-black uppercase opacity-40 ml-1">Status</label>
@@ -207,7 +240,7 @@ export default function FaturamentoPage() {
                       <button 
                         key={s}
                         onClick={() => setStatusFaturamento(s)}
-                        className={`py-3 rounded-xl text-[9px] font-black border transition-all ${statusFaturamento === s ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-700 opacity-40'}`}
+                        className={`py-3 rounded-xl text-[9px] font-black border transition-all ${statusFaturamento === s ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-700 opacity-40'}`}
                       >
                         {s}
                       </button>
@@ -216,22 +249,24 @@ export default function FaturamentoPage() {
                 </div>
               )}
 
-              <InputField label="Nº Pedido" icon={Receipt} value={numPedido} onChange={setNumPedido} placeholder="00000" clean={clean} />
-              <InputField label="Valor (R$)" icon={DollarSign} value={valor} onChange={setValor} placeholder="0,00" clean={clean} />
+              {/* Campos de Input */}
+              <InputField label="Nº Pedido de Venda" icon={Receipt} value={numPedido} onChange={setNumPedido} placeholder="00000" clean={clean} />
+              <InputField label="Nº OS do Sistema" icon={Hash} value={numSistema} onChange={setNumSistema} placeholder="0000" clean={clean} />
+              <InputField label="Valor do Serviço (R$)" icon={DollarSign} value={valor} onChange={setValor} placeholder="0,00" clean={clean} />
 
               <button 
                 onClick={salvarFaturamento}
                 disabled={salvando}
-                className="w-full py-5 rounded-2xl font-black uppercase tracking-widest mt-4 bg-blue-600 text-white active:scale-95 transition-all"
+                className="w-full py-5 rounded-2xl font-black uppercase tracking-widest mt-4 bg-blue-600 text-white shadow-lg active:scale-95 transition-all"
               >
-                {salvando ? 'Salvando...' : 'Confirmar'}
+                {salvando ? 'Salvando...' : 'Confirmar Faturamento'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* NAV INFERIOR */}
+      {/* NAVEGAÇÃO INFERIOR */}
       <nav className={`fixed bottom-0 left-0 right-0 border-t py-3 z-50 ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'}`}>
         <div className="max-w-md mx-auto grid grid-cols-4 px-4">
           <MenuItem clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
