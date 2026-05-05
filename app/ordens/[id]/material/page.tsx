@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Save, Layers, CircleDot, PipetteIcon as Pipe } from 'lucide-react'
+import { ArrowLeft, Save, Layers, CircleDot, PipetteIcon as Pipe, Loader2 } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 
-// Interfaces para corrigir os erros do VS Code
+// Interface para os dados do formulário
 interface DadosMaterial {
   descricao: string
   espessura: string
@@ -15,12 +15,22 @@ interface DadosMaterial {
   quantidade: string
 }
 
+// Interface para as propriedades do Input
+interface InputGeralProps {
+  label: string
+  placeholder?: string // O '?' torna o placeholder opcional
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  clean: boolean
+}
+
 export default function AdicionarMaterialPage() {
   const router = useRouter()
   const params = useParams()
   const id_os = params.id
   
-  const [tipo, setTipo] = useState('') 
+  const [tipo, setTipo] = useState<string>('') 
   const [loading, setLoading] = useState(false)
   const [tema, setTema] = useState<'dark' | 'clean'>('clean')
 
@@ -42,12 +52,24 @@ export default function AdicionarMaterialPage() {
     if (!tipo) return alert('Selecione um tipo de material')
     
     setLoading(true)
+
+    // Lógica para montar a descrição com as características
+    let descricaoFinal = dados.descricao.trim()
+
+    if (!descricaoFinal) {
+      if (tipo === 'chapa') {
+        descricaoFinal = `CHAPA ${dados.espessura}mm x ${dados.largura}mm x ${dados.comprimento}mm`
+      } else if (tipo === 'eixo') {
+        descricaoFinal = `EIXO Ø${dados.diametro}mm x ${dados.comprimento}mm`
+      } else if (tipo === 'tubo') {
+        descricaoFinal = `TUBO Ø${dados.diametro}mm x ${dados.comprimento}mm`
+      }
+    }
     
-    // Convertendo id_os para Number para ser compatível com int8
     const novoMaterial = {
       id_os: Number(id_os), 
       tipo,
-      descricao: dados.descricao || `${tipo.toUpperCase()} adicionada`,
+      descricao: descricaoFinal, 
       espessura: dados.espessura,
       diametro: dados.diametro,
       comprimento: dados.comprimento,
@@ -60,17 +82,11 @@ export default function AdicionarMaterialPage() {
       const { error } = await supabase.from('materiais_os').insert([novoMaterial])
 
       if (error) {
-        // Se for erro de estrutura (400/42804), mostramos o erro real
         console.error('Erro Supabase:', error)
-        
-        if (error.code === '42804' || error.code === 'P0001') {
-          alert('Erro de compatibilidade no banco. Verifique os tipos de ID.')
-        } else {
-          // Fallback para offline apenas em falhas de conexão
-          const pendentes = JSON.parse(localStorage.getItem('materiais_pendentes') || '[]')
-          localStorage.setItem('materiais_pendentes', JSON.stringify([...pendentes, novoMaterial]))
-          alert('Modo Offline: Salvo localmente.')
-        }
+        const pendentes = JSON.parse(localStorage.getItem('materiais_pendentes') || '[]')
+        localStorage.setItem('materiais_pendentes', JSON.stringify([...pendentes, novoMaterial]))
+        alert('Modo Offline: Salvo localmente.')
+        router.back()
       } else {
         router.back()
       }
@@ -110,17 +126,21 @@ export default function AdicionarMaterialPage() {
             <div className="grid grid-cols-2 gap-4">
               {tipo === 'chapa' && (
                 <>
-                  <InputGeral clean={clean} label="Espessura (mm)" placeholder="0.00" value={dados.espessura} onChange={(v) => setDados({...dados, espessura: v})} />
-                  <InputGeral clean={clean} label="Largura (mm)" placeholder="0.00" value={dados.largura} onChange={(v) => setDados({...dados, largura: v})} />
+                  <InputGeral clean={clean} label="Espessura (mm)" placeholder="Ex: 2.00" value={dados.espessura} onChange={(v: string) => setDados({...dados, espessura: v})} />
+                  <InputGeral clean={clean} label="Largura (mm)" placeholder="Ex: 1000" value={dados.largura} onChange={(v: string) => setDados({...dados, largura: v})} />
                 </>
               )}
 
               {(tipo === 'eixo' || tipo === 'tubo') && (
-                <InputGeral clean={clean} label="Diâmetro (mm)" placeholder="Ø 0.00" value={dados.diametro} onChange={(v) => setDados({...dados, diametro: v})} />
+                <InputGeral clean={clean} label="Diâmetro (mm)" placeholder="Ø Ex: 50.8" value={dados.diametro} onChange={(v: string) => setDados({...dados, diametro: v})} />
               )}
 
-              <InputGeral clean={clean} label="Comprimento (mm)" placeholder="0.00" value={dados.comprimento} onChange={(v) => setDados({...dados, comprimento: v})} />
-              <InputGeral clean={clean} label="Qtd" type="number" value={dados.quantidade} onChange={(v) => setDados({...dados, quantidade: v})} />
+              <InputGeral clean={clean} label="Comprimento (mm)" placeholder="Ex: 500" value={dados.comprimento} onChange={(v: string) => setDados({...dados, comprimento: v})} />
+              <InputGeral clean={clean} label="Quantidade" type="number" value={dados.quantidade} onChange={(v: string) => setDados({...dados, quantidade: v})} />
+            </div>
+
+            <div className="pt-2">
+               <InputGeral clean={clean} label="Descrição Personalizada" placeholder="Ex: Aço Inox 304" value={dados.descricao} onChange={(v: string) => setDados({...dados, descricao: v})} />
             </div>
 
             <button
@@ -128,8 +148,7 @@ export default function AdicionarMaterialPage() {
               disabled={loading}
               className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase mt-6 flex items-center justify-center gap-2 text-white active:scale-95 transition-all shadow-lg shadow-blue-600/20"
             >
-              <Save size={20} />
-              {loading ? 'Gravando...' : 'Confirmar Material'}
+              {loading ? <LoaderLoading /> : <><Save size={20} /> Confirmar Material</>}
             </button>
           </div>
         )}
@@ -138,7 +157,7 @@ export default function AdicionarMaterialPage() {
   )
 }
 
-// Componentes auxiliares com tipagem explícita
+// Componentes Auxiliares
 function BotaoTipo({ ativo, onClick, label, Icone, clean }: { ativo: boolean, onClick: () => void, label: string, Icone: any, clean: boolean }) {
   return (
     <button
@@ -157,9 +176,9 @@ function BotaoTipo({ ativo, onClick, label, Icone, clean }: { ativo: boolean, on
   )
 }
 
-function InputGeral({ label, placeholder, value, onChange, type = "text", clean }: { label: string, placeholder?: string, value: string, onChange: (v: string) => void, type?: string, clean: boolean }) {
+function InputGeral({ label, placeholder, value, onChange, type = "text", clean }: InputGeralProps) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 w-full">
       <label className={`text-[10px] font-bold uppercase ml-1 ${clean ? 'text-slate-400' : 'opacity-40'}`}>{label}</label>
       <input
         type={type}
@@ -174,4 +193,8 @@ function InputGeral({ label, placeholder, value, onChange, type = "text", clean 
       />
     </div>
   )
+}
+
+function LoaderLoading() {
+  return <Loader2 className="w-5 h-5 animate-spin text-white" />
 }
