@@ -197,7 +197,7 @@ export default function FaturamentoPage() {
                         <p className="text-[9px] uppercase font-black opacity-40 mb-1">Documentação</p>
                         <div className="flex gap-3 text-[11px] font-black text-emerald-500">
                           <span>PED: {ordem.numero_pedido_faturamento}</span>
-                          <span>SIS: {ordem.numero_os_faturamento}</span>
+                          <span>OS SIS.: {ordem.numero_os_faturamento}</span>
                         </div>
                       </div>
                       <CheckCircle2 size={16} className="text-emerald-500" />
