@@ -10,11 +10,9 @@ import {
   PlayCircle, PauseCircle, Pencil, Ruler, Download
 } from 'lucide-react'
 
-// Bibliotecas para PDF
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
-// --- INTERFACES ---
 type OrdemServico = {
   id: number
   numero_os: number | null
@@ -135,11 +133,17 @@ export default function DetalhesOSPage() {
     setGerandoPDF(true)
     try {
       const element = printRef.current
+      
+      // Força o scroll para o topo para capturar tudo
+      window.scrollTo(0,0)
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: tema === 'clean' ? '#f8fafc' : '#07111f',
-        logging: false
+        scrollY: -window.scrollY,
+        ignoreElements: (el) => el.classList.contains('no-print')
       })
       
       const imgData = canvas.toDataURL('image/png')
@@ -150,8 +154,8 @@ export default function DetalhesOSPage() {
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
       pdf.save(`OS_${ordem?.numero_os || id_os}.pdf`)
     } catch (error) {
-      console.error(error)
-      alert("Erro ao gerar PDF")
+      console.error("Erro PDF:", error)
+      alert("Erro ao gerar PDF. Tente novamente.")
     } finally {
       setGerandoPDF(false)
     }
@@ -256,8 +260,8 @@ export default function DetalhesOSPage() {
   return (
     <div className={`min-h-screen pb-32 transition-colors duration-300 ${clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'}`}>
       
-      <div ref={printRef} className="pt-6">
-        <main className="max-w-md mx-auto px-5">
+      <div ref={printRef}>
+        <main className="max-w-md mx-auto px-5 pt-6">
           
           {/* HEADER */}
           <div className="flex items-center justify-between gap-3 mb-6">
@@ -284,25 +288,25 @@ export default function DetalhesOSPage() {
           {!encerrada && (
             <section className="rounded-3xl p-5 mb-5 border shadow-sm no-print bg-blue-500/5 border-blue-500/10">
               <div className="flex gap-2">
-                <button onClick={() => atualizarStatusExecucao('Em andamento')} className={`flex-1 py-4 rounded-xl flex items-center justify-center gap-2 border ${ordem.status === 'Em andamento' ? 'bg-blue-600 text-white' : 'bg-slate-800/40 text-slate-400'}`}>
+                <button onClick={() => atualizarStatusExecucao('Em andamento')} className={`flex-1 py-4 rounded-xl flex items-center justify-center gap-2 border ${ordem.status === 'Em andamento' ? 'bg-blue-600 text-white border-blue-400' : 'bg-slate-800/40 border-slate-700 text-slate-400'}`}>
                   <PlayCircle size={18} /> <span className="text-[10px] font-black uppercase">Andamento</span>
                 </button>
-                <button onClick={() => atualizarStatusExecucao('Parado')} className={`flex-1 py-4 rounded-xl flex items-center justify-center gap-2 border ${ordem.status === 'Parado' ? 'bg-amber-500 text-white' : 'bg-slate-800/40 text-slate-400'}`}>
+                <button onClick={() => atualizarStatusExecucao('Parado')} className={`flex-1 py-4 rounded-xl flex items-center justify-center gap-2 border ${ordem.status === 'Parado' ? 'bg-amber-500 text-white border-amber-400' : 'bg-slate-800/40 border-slate-700 text-slate-400'}`}>
                   <PauseCircle size={18} /> <span className="text-[10px] font-black uppercase">Parar</span>
                 </button>
               </div>
 
               {mostrarCampoAndamento && (
                 <div className="mt-4 space-y-3">
-                  <input type="text" value={tecnicoAtuante} onChange={(e) => setTecnicoAtuante(e.target.value)} placeholder="Técnico..." className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm" />
-                  <textarea value={atividadeExecutada} onChange={(e) => setAtividadeExecutada(e.target.value)} placeholder="Atividade..." className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm" />
-                  <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 rounded-xl text-[10px] font-black uppercase">Confirmar Início</button>
+                  <input type="text" value={tecnicoAtuante} onChange={(e) => setTecnicoAtuante(e.target.value)} placeholder="Técnico..." className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+                  <textarea value={atividadeExecutada} onChange={(e) => setAtividadeExecutada(e.target.value)} placeholder="Atividade..." className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+                  <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 rounded-xl text-[10px] font-black uppercase text-white">Confirmar Início</button>
                 </div>
               )}
               {mostrarCampoParada && (
                 <div className="mt-4 space-y-3">
-                  <textarea value={motivoParada} onChange={(e) => setMotivoParada(e.target.value)} placeholder="Motivo da parada..." className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm" />
-                  <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 rounded-xl text-[10px] font-black uppercase">Confirmar Parada</button>
+                  <textarea value={motivoParada} onChange={(e) => setMotivoParada(e.target.value)} placeholder="Motivo da parada..." className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+                  <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 rounded-xl text-[10px] font-black uppercase text-white">Confirmar Parada</button>
                 </div>
               )}
             </section>
@@ -339,27 +343,35 @@ export default function DetalhesOSPage() {
           </section>
 
           {/* MATERIAIS */}
-          {materiais.length > 0 && (
-            <section className={`rounded-3xl p-6 mb-5 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
-              <h2 className="font-black uppercase text-xs mb-4">Materiais Utilizados</h2>
-              <div className="space-y-3">
-                {materiais.map((m) => (
-                  <div key={m.id} className="p-4 bg-slate-500/5 rounded-2xl border border-white/5">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-xs font-black uppercase text-blue-500">{m.tipo?.replace('_', ' ')}</span>
-                      <span className="text-xs font-black">x{m.quantidade}</span>
+          <div className="mb-6">
+             {!encerrada && (
+                <button onClick={() => router.push(`/ordens/${id_os}/material`)} className="w-full py-4 mb-4 rounded-2xl border-2 border-dashed border-blue-500/20 text-blue-400 no-print flex items-center justify-center gap-2">
+                    <span className="font-black uppercase text-xs">Acrescentar Material</span>
+                </button>
+             )}
+             
+             {materiais.length > 0 && (
+                <section className={`rounded-3xl p-6 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
+                    <h2 className="font-black uppercase text-xs mb-4">Materiais Utilizados</h2>
+                    <div className="space-y-3">
+                        {materiais.map((m) => (
+                        <div key={m.id} className="p-4 bg-slate-500/5 rounded-2xl border border-white/5">
+                            <div className="flex justify-between mb-2">
+                            <span className="text-xs font-black uppercase text-blue-500">{m.tipo?.replace('_', ' ')}</span>
+                            <span className="text-xs font-black">x{m.quantidade}</span>
+                            </div>
+                            <p className="text-xs font-bold uppercase">{m.descricao}</p>
+                            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/5">
+                            {m.espessura && <MedidaDetalhe label="Esp." valor={`${m.espessura}mm`} />}
+                            {m.largura && <MedidaDetalhe label="Larg." valor={`${m.largura}mm`} />}
+                            {m.comprimento && <MedidaDetalhe label="Comp." valor={`${m.comprimento}mm`} />}
+                            </div>
+                        </div>
+                        ))}
                     </div>
-                    <p className="text-xs font-bold uppercase">{m.descricao}</p>
-                    <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/5">
-                      {m.espessura && <MedidaDetalhe label="Esp." valor={`${m.espessura}mm`} />}
-                      {m.largura && <MedidaDetalhe label="Larg." valor={`${m.largura}mm`} />}
-                      {m.comprimento && <MedidaDetalhe label="Comp." valor={`${m.comprimento}mm`} />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+                </section>
+             )}
+          </div>
 
           {/* HISTÓRICO */}
           <section className={`rounded-3xl p-6 mb-8 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
@@ -401,13 +413,13 @@ export default function DetalhesOSPage() {
       {/* MODAL EDIÇÃO */}
       {modalEdicao && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[101] flex items-center justify-center p-6">
-            <div className={`w-full max-w-sm rounded-[32px] p-8 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-700 text-white'}`}>
+            <div className={`w-full max-w-sm rounded-[32px] p-8 border ${clean ? 'bg-white text-black' : 'bg-[#0d1726] border-slate-700 text-white'}`}>
                 <h2 className="text-lg font-black uppercase italic mb-6">Editar OS</h2>
                 <div className="space-y-4">
-                    <input value={editForm.cliente} onChange={(e) => setEditForm({...editForm, cliente: e.target.value})} placeholder="Cliente" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700" />
-                    <input value={editForm.solicitante} onChange={(e) => setEditForm({...editForm, solicitante: e.target.value})} placeholder="Solicitante" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700" />
-                    <input value={editForm.maquina} onChange={(e) => setEditForm({...editForm, maquina: e.target.value})} placeholder="Máquina" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700" />
-                    <textarea value={editForm.descricao} onChange={(e) => setEditForm({...editForm, descricao: e.target.value})} placeholder="Descrição" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700 min-h-[100px]" />
+                    <input value={editForm.cliente} onChange={(e) => setEditForm({...editForm, cliente: e.target.value})} placeholder="Cliente" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700 text-white" />
+                    <input value={editForm.solicitante} onChange={(e) => setEditForm({...editForm, solicitante: e.target.value})} placeholder="Solicitante" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700 text-white" />
+                    <input value={editForm.maquina} onChange={(e) => setEditForm({...editForm, maquina: e.target.value})} placeholder="Máquina" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700 text-white" />
+                    <textarea value={editForm.descricao} onChange={(e) => setEditForm({...editForm, descricao: e.target.value})} placeholder="Descrição" className="w-full rounded-xl p-3 bg-slate-900 border border-slate-700 min-h-[100px] text-white" />
                     <button onClick={salvarEdicaoOS} disabled={salvandoEdicao} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-white shadow-lg">{salvandoEdicao ? 'Salvando...' : 'Salvar Alterações'}</button>
                     <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold text-slate-500 uppercase mt-2">Fechar</button>
                 </div>
@@ -415,16 +427,13 @@ export default function DetalhesOSPage() {
         </div>
       )}
 
-      {/* Estilo para ocultar elementos na geração do PDF */}
       <style jsx global>{`
         @media print { .no-print { display: none !important; } }
-        .no-print { transition: opacity 0.2s; }
       `}</style>
     </div>
   )
 }
 
-// --- AUXILIARES ---
 function InfoItem({ Icone, titulo, texto, full, clean }: any) {
   return (
     <div className={`flex gap-3 ${full ? 'col-span-2 mt-2 border-t pt-4 border-slate-500/10' : ''}`}>
