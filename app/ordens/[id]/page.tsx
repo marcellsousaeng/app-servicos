@@ -24,8 +24,6 @@ type OrdemServico = {
   motivo_parada: string | null
   usuario_responsavel: string | null
   created_at: string
-  numero_pedido_faturamento: string | null
-  numero_os_faturamento: string | null
 }
 
 type FotoOS = {
@@ -38,7 +36,6 @@ type Material = {
   tipo: string
   descricao: string
   quantidade: string
-  // Campos técnicos adicionados
   espessura?: string
   diametro?: string
   diametro_interno?: string
@@ -67,10 +64,6 @@ export default function DetalhesOSPage() {
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
   const [perfilUsuario, setPerfilUsuario] = useState<string | null>(null)
-  
-  const [numPedido, setNumPedido] = useState('')
-  const [numOSFaturam, setNumOSFaturam] = useState('')
-  const [salvandoDadosExtras, setSalvandoDadosExtras] = useState(false)
 
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
   const [atividadeExecutada, setAtividadeExecutada] = useState('')
@@ -112,8 +105,6 @@ export default function DetalhesOSPage() {
     if (!osData) return setCarregando(false)
     
     setOrdem(osData)
-    setNumPedido(osData.numero_pedido_faturamento || '')
-    setNumOSFaturam(osData.numero_os_faturamento || '')
     
     setEditForm({
       cliente: osData.cliente || '',
@@ -128,14 +119,12 @@ export default function DetalhesOSPage() {
     const { data: upds } = await supabase.from('os_atualizacoes').select('*').eq('ordem_servico_id', id).order('created_at', { ascending: false })
     setAtualizacoes(upds || [])
 
-    // Busca todos os campos da tabela de materiais
     const { data: mats } = await supabase.from('materiais_os').select('*').eq('id_os', id)
     setMateriais(mats || [])
 
     setCarregando(false)
   }
 
-  // --- FUNÇÕES DE AÇÃO ---
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
     
@@ -234,21 +223,8 @@ export default function DetalhesOSPage() {
     if (!error) carregarDados()
   }
 
-  async function salvarDadosFaturamento() {
-    setSalvandoDadosExtras(true)
-    const { error } = await supabase.from('ordens_servico').update({
-        numero_pedido_faturamento: numPedido,
-        numero_os_faturamento: numOSFaturam
-      }).eq('id', ordem?.id)
-
-    if (!error) { alert("Faturamento atualizado!"); carregarDados() }
-    setSalvandoDadosExtras(false)
-  }
-
-  // --- ESTILOS E CONDICIONAIS ---
   const clean = tema === 'clean'
   const encerrada = ordem?.status === 'Finalizado' || ordem?.status === 'Cancelado'
-  const exibirFaturamento = ordem && ordem.status !== 'Cancelado' && ordem.status !== 'Nova'
   const podeEditarSempre = perfilUsuario && ['Engenheiro', 'Diretor', 'Encarregado de Produção'].includes(perfilUsuario)
 
   if (carregando) return (
@@ -392,7 +368,7 @@ export default function DetalhesOSPage() {
           </div>
         </section>
 
-        {/* MATERIAIS - QUADRO ATUALIZADO */}
+        {/* MATERIAIS */}
         <div className="mb-6">
           {!encerrada && (
             <button onClick={() => router.push(`/ordens/${id_os}/material`)} className={`w-full py-4 mb-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 ${clean ? 'border-blue-500/30 text-blue-600' : 'border-blue-500/20 text-blue-400'}`}>
@@ -414,10 +390,7 @@ export default function DetalhesOSPage() {
                         x{m.quantidade}
                       </span>
                     </div>
-                    
                     <p className="text-xs font-bold uppercase mb-2">{m.descricao}</p>
-                    
-                    {/* Grid Dinâmico de Dimensões Técnicas */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 pt-3 border-t border-white/5">
                       {m.espessura && <MedidaDetalhe label="Espessura" valor={`${m.espessura}mm`} />}
                       {m.diametro && <MedidaDetalhe label={m.tipo?.includes('tubo') ? "Ø Externo" : "Ø Diâmetro"} valor={`${m.diametro}mm`} />}
@@ -451,24 +424,6 @@ export default function DetalhesOSPage() {
             ))}
           </div>
         </section>
-
-        {/* FATURAMENTO */}
-        {exibirFaturamento && (
-          <section className={`rounded-3xl p-6 mb-8 border ${ordem.status === 'Finalizado' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-blue-500/40 bg-blue-500/5'} ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
-            <h2 className="font-black uppercase text-xs mb-4 text-blue-500">Dados de Faturamento</h2>
-            <div className="space-y-4">
-              <input type="text" value={numPedido} onChange={(e) => setNumPedido(e.target.value)} placeholder="Nº Pedido de Venda" className={`w-full rounded-xl p-4 text-sm font-bold border outline-none ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white'}`} />
-              <input type="text" value={numOSFaturam} onChange={(e) => setNumOSFaturam(e.target.value)} placeholder="Nº OS do Sistema Principal" className={`w-full rounded-xl p-4 text-sm font-bold border outline-none ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#111c2e] border-slate-700 text-white'}`} />
-              <button 
-                onClick={salvarDadosFaturamento} 
-                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform"
-                disabled={salvandoDadosExtras}
-              >
-                {salvandoDadosExtras ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Salvar no Faturamento'}
-              </button>
-            </div>
-          </section>
-        )}
 
         {/* BOTÕES FINAIS */}
         {!encerrada && (
