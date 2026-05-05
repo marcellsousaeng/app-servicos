@@ -6,7 +6,8 @@ import { supabase } from '../../lib/supabase'
 import { 
   LogOut, Plus, ClipboardList, CircleDollarSign, Settings, 
   Play, Pause, CheckCircle2, XCircle,
-  LayoutGrid, User, ArrowUpRight, Wifi, WifiOff 
+  LayoutGrid, User, ArrowUpRight, Wifi, WifiOff,
+  Receipt // Ícone importado para faturamento
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -71,9 +72,10 @@ export default function DashboardPage() {
 
     if (dadosUsuario) setUsuarioLogado(dadosUsuario)
 
+    // Selecionando explicitamente os campos de faturamento
     const { data: dadosOrdens } = await supabase
       .from('ordens_servico')
-      .select('*')
+      .select('*, numero_pedido_faturamento, numero_os_faturamento')
       .order('created_at', { ascending: false })
 
     const lista = dadosOrdens || []
@@ -90,7 +92,6 @@ export default function DashboardPage() {
 
   const clean = tema === 'clean'
 
-  // LÓGICA DE FILTRO CORRIGIDA
   const ordensFiltradas = useMemo(() => {
     if (filtroStatus === 'em_andamento') return ordens.filter(o => o.status === 'Em andamento')
     if (filtroStatus === 'parado') return ordens.filter(o => o.status === 'Parado')
@@ -154,7 +155,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* INDICADORES COM FILTROS AJUSTADOS */}
+        {/* INDICADORES */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <CardMini clean={clean} titulo="Em Execução" valor={contadores.andamento} Icone={Play} cor="blue" onClick={() => setFiltroStatus('em_andamento')} />
           <CardMini clean={clean} titulo="Paradas" valor={contadores.parado} Icone={Pause} cor="amber" onClick={() => setFiltroStatus('parado')} />
@@ -162,7 +163,7 @@ export default function DashboardPage() {
           <CardMini clean={clean} titulo="Canceladas" valor={contadores.cancelado} Icone={XCircle} cor="rose" onClick={() => setFiltroStatus('cancelado')} />
         </div>
 
-        {/* LISTAGEM RECENTE / FILTRADA */}
+        {/* LISTAGEM RECENTE */}
         <section className={`rounded-3xl border shadow-xl overflow-hidden ${
           clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'
         }`}>
@@ -190,52 +191,81 @@ export default function DashboardPage() {
             ) : ordensFiltradas.length === 0 ? (
               <div className="py-10 text-center text-slate-400 text-sm italic">Nenhum registro encontrado.</div>
             ) : (
-              (filtroStatus === 'todas' ? ordensFiltradas.slice(0, 5) : ordensFiltradas).map((ordem) => (
-                <div 
-                  key={ordem.id} 
-                  onClick={() => router.push(`/ordens/${ordem.id}`)}
-                  className={`p-4 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] hover:border-blue-500/50 ${
-                    clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-black text-blue-500">#{ordem.numero_os ?? ordem.id}</span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
-                      ordem.status === 'Finalizado' 
-                        ? 'bg-emerald-500/10 text-emerald-500' 
-                        : (ordem.status === 'Cancelado' || ordem.cancelada)
-                        ? 'bg-rose-500/10 text-rose-500'
-                        : ordem.status === 'Parado'
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-blue-500/10 text-blue-500'
-                    }`}>
-                      {ordem.status}
-                    </span>
+              (filtroStatus === 'todas' ? ordensFiltradas.slice(0, 5) : ordensFiltradas).map((ordem) => {
+                // Lógica de verificação de faturamento
+                const isFaturada = !!(ordem.numero_pedido_faturamento || ordem.numero_os_faturamento);
+
+                return (
+                  <div 
+                    key={ordem.id} 
+                    onClick={() => router.push(`/ordens/${ordem.id}`)}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] hover:border-blue-500/50 ${
+                      clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-blue-500">#{ordem.numero_os ?? ordem.id}</span>
+                        
+                        {/* INDICADOR DE FATURAMENTO PARA FINALIZADAS */}
+                        {ordem.status === 'Finalizado' && (
+                          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                            isFaturada 
+                            ? 'bg-emerald-500 text-white shadow-sm' 
+                            : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                          }`}>
+                            <Receipt size={10} />
+                            {isFaturada ? 'Faturada' : 'Pendente'}
+                          </div>
+                        )}
+                      </div>
+
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
+                        ordem.status === 'Finalizado' 
+                          ? 'bg-emerald-500/10 text-emerald-500' 
+                          : (ordem.status === 'Cancelado' || ordem.cancelada)
+                          ? 'bg-rose-500/10 text-rose-500'
+                          : ordem.status === 'Parado'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-blue-500/10 text-blue-500'
+                      }`}>
+                        {ordem.status}
+                      </span>
+                    </div>
+
+                    <p className="text-sm font-bold truncate uppercase">{ordem.cliente}</p>
+                    <p className="text-xs opacity-50 truncate uppercase mb-1">
+                      {ordem.maquina || 'MAQUINA NÃO INF.' }
+                    </p>
+
+                    {/* EXIBIÇÃO DOS DADOS DE FATURAMENTO SE EXISTIREM */}
+                    {isFaturada && (
+                      <div className="mt-2 text-[10px] font-bold text-emerald-500/80 flex gap-3">
+                        {ordem.numero_pedido_faturamento && <span>PED: {ordem.numero_pedido_faturamento}</span>}
+                        {ordem.numero_os_faturamento && <span>SISTEMA: {ordem.numero_os_faturamento}</span>}
+                      </div>
+                    )}
+
+                    {/* EXIBIÇÃO DO TÉCNICO EM ANDAMENTO */}
+                    {ordem.status === 'Em andamento' && ordem.usuario_responsavel && (
+                      <div className="mt-2 p-2 bg-blue-500/5 border border-blue-500/20 rounded-lg flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <p className="text-[10px] font-black uppercase text-blue-500">
+                          Executando: <span className="opacity-80 font-bold">{ordem.usuario_responsavel}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* EXIBIÇÃO DO MOTIVO SE PARADO */}
+                    {ordem.status === 'Parado' && ordem.motivo_parada && (
+                      <div className="mt-2 p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                        <p className="text-[9px] font-black uppercase text-amber-500">Motivo da Parada:</p>
+                        <p className="text-[11px] font-bold italic opacity-80">"{ordem.motivo_parada}"</p>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm font-bold truncate uppercase">{ordem.cliente}</p>
-                  <p className="text-xs opacity-50 truncate uppercase mb-1">
-                    {ordem.maquina || 'MAQUINA NÃO INF.' }
-                  </p>
-
-                  {/* EXIBIÇÃO DO TÉCNICO EM ANDAMENTO */}
-                  {ordem.status === 'Em andamento' && ordem.usuario_responsavel && (
-                    <div className="mt-2 p-2 bg-blue-500/5 border border-blue-500/20 rounded-lg flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                      <p className="text-[10px] font-black uppercase text-blue-500">
-                        Executando: <span className="opacity-80 font-bold">{ordem.usuario_responsavel}</span>
-                      </p>
-                    </div>
-                  )}
-
-                  {/* EXIBIÇÃO DO MOTIVO SE PARADO */}
-                  {ordem.status === 'Parado' && ordem.motivo_parada && (
-                    <div className="mt-2 p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                      <p className="text-[9px] font-black uppercase text-amber-500">Motivo da Parada:</p>
-                      <p className="text-[11px] font-bold italic opacity-80">"{ordem.motivo_parada}"</p>
-                    </div>
-                  )}
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </section>
@@ -256,6 +286,7 @@ export default function DashboardPage() {
   )
 }
 
+// ... (Subcomponentes Atalho, CardMini e MenuItem permanecem iguais)
 function Atalho({ titulo, Icone, onClick, destaque, clean }: any) {
   return (
     <button onClick={onClick} className={`h-20 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-90 border ${
