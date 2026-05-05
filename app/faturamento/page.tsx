@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { 
-  ArrowLeft, Search, CheckCircle2, XCircle, LayoutGrid, 
+  ArrowLeft, Search, XCircle, LayoutGrid, 
   ClipboardList, CircleDollarSign, Settings, Hash, 
   Receipt, Store, DollarSign
 } from 'lucide-react'
@@ -57,7 +57,7 @@ export default function FaturamentoPage() {
   const clean = tema === 'clean'
 
   const prepararFaturamento = (e: React.MouseEvent, ordem: any) => {
-    e.stopPropagation() // Impede de abrir o relatório ao clicar no botão
+    e.stopPropagation() 
     setOsSelecionada(ordem)
     setUnidade(ordem.unidade_faturamento || 'TORNEARIA DIVISA')
     setNumPedido(ordem.numero_pedido_faturamento || '')
@@ -142,7 +142,8 @@ export default function FaturamentoPage() {
           ) : ordensFiltradas.map((ordem) => (
             <div 
               key={ordem.id} 
-              onClick={() => router.push(`/relatorio/${ordem.id}`)}
+              // CORREÇÃO DA ROTA: Agora aponta para /ordens/[id]
+              onClick={() => router.push(`/ordens/${ordem.id}`)}
               className={`rounded-[2rem] border p-6 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                 ordem.status_faturamento === 'Faturado' 
                 ? 'border-emerald-500/30 bg-emerald-500/5' 
@@ -161,7 +162,6 @@ export default function FaturamentoPage() {
               <h3 className="font-black text-base uppercase mb-1 truncate">{ordem.cliente}</h3>
               <p className="text-xs font-bold opacity-50 mb-5 truncate uppercase">{ordem.maquina}</p>
 
-              {/* RESUMO DOS DADOS NO CARD */}
               {(ordem.numero_pedido_faturamento || ordem.numero_os_faturamento || (ordem.valor_faturamento > 0)) && (
                 <div className={`mb-5 p-4 rounded-2xl border flex flex-col gap-3 ${clean ? 'bg-slate-50 border-slate-100' : 'bg-white/5 border-white/10'}`}>
                   <div className="flex justify-between items-center">
