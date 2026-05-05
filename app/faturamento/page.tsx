@@ -212,7 +212,7 @@ export default function FaturamentoPage() {
                           <div className="flex gap-3 text-[11px] font-black text-emerald-500">
                             <span>PED: {ordem.numero_pedido_faturamento || '---'}</span>
                             <span className="opacity-30">|</span>
-                            <span>SIS: {ordem.numero_os_faturamento || '---'}</span>
+                            <span>OS: {ordem.numero_os_faturamento || '---'}</span>
                           </div>
                         </div>
                         <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
