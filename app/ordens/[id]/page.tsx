@@ -90,8 +90,8 @@ export default function DetalhesOSPage() {
 
   async function carregarDados() {
     const id = Number(id_os)
-    const { data: osData, error: osError } = await supabase.from('ordens_servico').select('*').eq('id', id).single()
-    if (osError || !osData) return setCarregando(false)
+    const { data: osData } = await supabase.from('ordens_servico').select('*').eq('id', id).single()
+    if (!osData) return setCarregando(false)
     
     setOrdem(osData)
     setEditForm({
@@ -117,30 +117,33 @@ export default function DetalhesOSPage() {
     if (!printRef.current) return
     setGerandoPDF(true)
     
-    // 1. Aguarda um pouco para garantir renderização
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     try {
       const element = printRef.current
-      
-      // 2. SOLUÇÃO PARA OKLCH:
-      // Clonamos o elemento e removemos cores problemáticas do clone
-      // Ou injetamos um estilo que sobrescreve as variáveis do Tailwind que usam oklch
       const bgColor = clean ? '#f8fafc' : '#07111f'
 
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        logging: false,
         backgroundColor: bgColor,
-        // Função para garantir que não processe cores oklch em variáveis CSS
+        logging: false,
         onclone: (clonedDoc) => {
-            const el = clonedDoc.body;
-            // Remove variáveis CSS que costumam conter oklch no Tailwind v4
+          // REMOVE CORES OKLCH DO CLONE ANTES DA RENDERIZAÇÃO
+          const allElements = clonedDoc.getElementsByTagName('*');
+          for (let i = 0; i < allElements.length; i++) {
+            const el = allElements[i] as HTMLElement;
+            const style = window.getComputedStyle(el);
+            
+            // Se houver oklch em qualquer propriedade comum, resetamos para transparente ou herança
+            if (style.color.includes('oklch')) el.style.color = 'inherit';
+            if (style.backgroundColor.includes('oklch')) el.style.backgroundColor = 'transparent';
+            if (style.borderColor.includes('oklch')) el.style.borderColor = 'transparent';
+            
+            // Limpa as variáveis específicas do Tailwind v4 que causam o crash
             el.style.setProperty('--tw-shadow-color', 'rgba(0,0,0,0)');
             el.style.setProperty('--tw-ring-color', 'rgba(0,0,0,0)');
             el.style.setProperty('--tw-outline-color', 'rgba(0,0,0,0)');
+          }
         },
         ignoreElements: (el) => el.classList.contains('no-print')
       })
@@ -153,13 +156,14 @@ export default function DetalhesOSPage() {
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
       pdf.save(`OS_${ordem?.numero_os || id_os}.pdf`)
     } catch (error) {
-      console.error('Erro detalhado:', error)
-      alert("Erro ao gerar PDF. Tente atualizar a página.")
+      console.error('Erro ao gerar PDF:', error)
+      alert("Houve um erro técnico na geração do PDF. Tente novamente.")
     } finally {
       setGerandoPDF(false)
     }
   }
 
+  // --- RESTO DAS FUNÇÕES MANTIDAS ---
   async function atualizarStatusExecucao(novoStatus: string) {
     if (!ordem) return
     if (novoStatus === 'Em andamento' && !mostrarCampoAndamento) {
@@ -200,13 +204,10 @@ export default function DetalhesOSPage() {
     try {
       const file = e.target.files[0]
       const nomeArquivo = `${ordem.id}/${Date.now()}-${file.name}`
-      
       const { error: uploadError } = await supabase.storage.from('os-imagens').upload(nomeArquivo, file)
       if (uploadError) throw uploadError
-
       const { data: { publicUrl } } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
       await supabase.from('fotos_os').insert([{ id_os: ordem.id, url: publicUrl }])
-      
       carregarDados()
     } catch (error) {
       console.error(error)
@@ -229,10 +230,8 @@ export default function DetalhesOSPage() {
 
   return (
     <div className={`min-h-screen pb-32 transition-colors duration-300 ${clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'}`}>
-      
       <div ref={printRef} className="pt-6">
         <main className="max-w-md mx-auto px-5">
-          
           <div className="flex items-center justify-between gap-3 mb-6">
             <button onClick={() => router.push('/ordens')} className={`w-12 h-12 rounded-2xl flex items-center justify-center border no-print ${clean ? 'bg-white border-slate-200 text-slate-600' : 'bg-[#0d1726] border-slate-700 text-white'}`}>
               <ChevronLeft size={24} />
@@ -259,7 +258,6 @@ export default function DetalhesOSPage() {
                   <PauseCircle size={18} /> Parar
                 </button>
               </div>
-
               {(mostrarCampoAndamento || mostrarCampoParada) && (
                 <div className="mt-4 space-y-3">
                   {mostrarCampoAndamento && (
@@ -291,34 +289,20 @@ export default function DetalhesOSPage() {
           </div>
 
           <div className={`rounded-3xl p-6 mb-5 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[10px] font-black uppercase text-blue-500">Fotos de Campo</h2>
-              {subindoFoto && <Loader2 size={14} className="animate-spin text-blue-500" />}
-            </div>
-            
+            <h2 className="text-[10px] font-black uppercase text-blue-500 mb-4">Fotos de Campo</h2>
             <div className="no-print grid grid-cols-2 gap-3 mb-6">
-               <label className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-2xl cursor-pointer hover:bg-blue-700 transition-all active:scale-95">
-                 <Camera size={20}/>
-                 <span className="text-[9px] font-black uppercase">Câmera</span>
+               <label className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-2xl cursor-pointer active:scale-95">
+                 <Camera size={20}/><span className="text-[9px] font-black uppercase">Câmera</span>
                  <input type="file" hidden capture="environment" accept="image/*" onChange={handleAddFoto} disabled={subindoFoto} />
                </label>
-
-               <label className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all active:scale-95 ${clean ? 'border-slate-200 text-slate-500 hover:bg-slate-50' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}>
-                 <ImagePlus size={20}/>
-                 <span className="text-[9px] font-black uppercase">Galeria</span>
+               <label className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed cursor-pointer ${clean ? 'border-slate-200 text-slate-500' : 'border-slate-700 text-slate-400'}`}>
+                 <ImagePlus size={20}/><span className="text-[9px] font-black uppercase">Galeria</span>
                  <input type="file" hidden accept="image/*" onChange={handleAddFoto} disabled={subindoFoto} />
                </label>
             </div>
-
             <div className="grid grid-cols-2 gap-2">
               {fotos.map(f => (
-                <img 
-                  key={f.id} 
-                  src={f.url} 
-                  crossOrigin="anonymous" 
-                  onClick={() => setFotoExpandida(f.url)} 
-                  className="w-full h-32 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
-                />
+                <img key={f.id} src={f.url} crossOrigin="anonymous" onClick={() => setFotoExpandida(f.url)} className="w-full h-32 object-cover rounded-xl cursor-pointer" />
               ))}
             </div>
           </div>
@@ -361,7 +345,7 @@ export default function DetalhesOSPage() {
       {fotoExpandida && (
         <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4" onClick={() => setFotoExpandida(null)}>
           <button className="absolute top-6 right-6 text-white bg-white/10 p-2 rounded-full"><X size={32}/></button>
-          <img src={fotoExpandida} className="max-w-full max-h-full rounded-lg shadow-2xl" />
+          <img src={fotoExpandida} className="max-w-full max-h-full rounded-lg" />
         </div>
       )}
 
@@ -406,7 +390,7 @@ function InfoItem({ Icone, titulo, texto, full, clean }: any) {
 
 function MenuNav({ titulo, Icone, ativo, onClick }: any) {
   return (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${ativo ? 'text-blue-500' : 'text-slate-500'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 min-w-[60px] ${ativo ? 'text-blue-500' : 'text-slate-500'}`}>
       <Icone size={20}/><span className="text-[9px] font-black uppercase">{titulo}</span>
     </button>
   )
