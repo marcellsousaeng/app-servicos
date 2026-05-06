@@ -7,48 +7,11 @@ import {
   ChevronLeft, ClipboardList, User, Monitor, 
   FileText, Camera, Users, LayoutGrid, 
   CircleDollarSign, Settings, CheckCircle2, XCircle, Loader2,
-  PlayCircle, PauseCircle, Pencil, Download, X
+  PlayCircle, PauseCircle, Pencil, Download, X, Calendar, Package, Clock
 } from 'lucide-react'
 
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
-
-// --- INTERFACES ---
-type OrdemServico = {
-  id: number
-  numero_os: number | null
-  cliente: string
-  solicitante: string | null
-  maquina: string
-  descricao: string
-  status: string
-  cancelada: boolean
-  motivo_cancelamento: string | null
-  motivo_parada: string | null
-  usuario_responsavel: string | null
-  created_at: string
-}
-
-type FotoOS = {
-  id: string
-  url: string
-}
-
-type Material = {
-  id: string
-  tipo: string
-  descricao: string
-  quantidade: string
-}
-
-type Atualizacao = {
-  id: number
-  created_at: string
-  ordem_servico_id: number
-  descricao: string
-  tecnicos_responsaveis: string | null
-  usuario_nome: string | null
-}
 
 export default function DetalhesOSPage() {
   const params = useParams()
@@ -56,30 +19,14 @@ export default function DetalhesOSPage() {
   const id_os = params.id
   const printRef = useRef<HTMLDivElement>(null)
 
-  const [ordem, setOrdem] = useState<OrdemServico | null>(null)
-  const [fotos, setFotos] = useState<FotoOS[]>([])
-  const [atualizacoes, setAtualizacoes] = useState<Atualizacao[]>([])
-  const [materiais, setMateriais] = useState<Material[]>([])
+  const [ordem, setOrdem] = useState<any>(null)
+  const [fotos, setFotos] = useState<any[]>([])
+  const [atualizacoes, setAtualizacoes] = useState<any[]>([])
+  const [materiais, setMateriais] = useState<any[]>([])
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
-  
-  const [tecnicoAtuante, setTecnicoAtuante] = useState('')
-  const [atividadeExecutada, setAtividadeExecutada] = useState('')
-  const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
-  
-  const [motivoParada, setMotivoParada] = useState('')
-  const [mostrarCampoParada, setMostrarCampoParada] = useState(false)
   const [gerandoPDF, setGerandoPDF] = useState(false)
   const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
-
-  const [modalEdicao, setModalEdicao] = useState(false)
-  const [editForm, setEditForm] = useState({
-    cliente: '',
-    solicitante: '',
-    maquina: '',
-    descricao: ''
-  })
-  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
   useEffect(() => {
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
@@ -91,14 +38,7 @@ export default function DetalhesOSPage() {
     const id = Number(id_os)
     const { data: osData } = await supabase.from('ordens_servico').select('*').eq('id', id).single()
     if (!osData) return setCarregando(false)
-    
     setOrdem(osData)
-    setEditForm({
-      cliente: osData.cliente || '',
-      solicitante: osData.solicitante || '',
-      maquina: osData.maquina || '',
-      descricao: osData.descricao || ''
-    })
 
     const { data: fotosData } = await supabase.from('fotos_os').select('id, url').eq('id_os', id)
     setFotos(fotosData || [])
@@ -116,8 +56,8 @@ export default function DetalhesOSPage() {
     if (!printRef.current) return
     setGerandoPDF(true)
     
-    // Aguarda um momento para garantir que as imagens carregaram com crossOrigin
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Pequeno delay para garantir renderização das imagens com crossOrigin
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     try {
       const element = printRef.current
@@ -125,9 +65,8 @@ export default function DetalhesOSPage() {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        logging: false,
-        backgroundColor: clean ? '#f8fafc' : '#07111f',
-        ignoreElements: (el) => el.classList.contains('no-print')
+        backgroundColor: "#ffffff", // Relatórios sempre fundo branco
+        windowWidth: 800 // Largura fixa para manter a proporção do modelo
       })
 
       const imgData = canvas.toDataURL('image/png')
@@ -136,257 +75,191 @@ export default function DetalhesOSPage() {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-      pdf.save(`OS_${ordem?.numero_os || id_os}.pdf`)
+      pdf.save(`Relatorio_OS_${ordem?.numero_os || id_os}.pdf`)
     } catch (error) {
-      console.error(error)
-      alert("Erro ao gerar PDF. Verifique se as imagens carregaram corretamente.")
+      alert("Erro ao gerar PDF")
     } finally {
       setGerandoPDF(false)
     }
   }
 
-  async function atualizarStatusExecucao(novoStatus: string) {
-    if (!ordem) return
-    if (novoStatus === 'Em andamento' && !mostrarCampoAndamento) {
-        setMostrarCampoAndamento(true); setMostrarCampoParada(false); return 
-    }
-    if (novoStatus === 'Parado' && !mostrarCampoParada) {
-        setMostrarCampoParada(true); setMostrarCampoAndamento(false); return 
-    }
-
-    const { error } = await supabase.from('ordens_servico').update({ 
-      status: novoStatus,
-      motivo_parada: novoStatus === 'Parado' ? motivoParada : null,
-      usuario_responsavel: novoStatus === 'Em andamento' ? tecnicoAtuante : ordem.usuario_responsavel
-    }).eq('id', ordem.id)
-
-    if (!error) {
-      await supabase.from('os_atualizacoes').insert([{
-        ordem_servico_id: ordem.id,
-        descricao: novoStatus === 'Em andamento' ? `INICIO: ${atividadeExecutada}` : `PARADA: ${motivoParada}`,
-        tecnicos_responsaveis: novoStatus === 'Em andamento' ? tecnicoAtuante : null,
-        usuario_nome: 'SISTEMA'
-      }])
-      setMostrarCampoParada(false); setMostrarCampoAndamento(false); carregarDados()
-    }
-  }
-
-  async function salvarEdicaoOS() {
-    if (!ordem) return
-    setSalvandoEdicao(true)
-    const { error } = await supabase.from('ordens_servico').update({...editForm}).eq('id', ordem.id)
-    if (!error) { setModalEdicao(false); carregarDados(); }
-    setSalvandoEdicao(false)
-  }
-
-  async function handleAddFoto(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files || !ordem) return
-    const file = e.target.files[0]
-    const nomeArquivo = `${ordem.id}/${Date.now()}-${file.name}`
-    await supabase.storage.from('os-imagens').upload(nomeArquivo, file)
-    const { data: { publicUrl } } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
-    await supabase.from('fotos_os').insert([{ id_os: ordem.id, url: publicUrl }])
-    carregarDados()
-  }
-
-  async function alterarStatus(novoStatus: string) {
-    if (!ordem || !confirm(`Deseja alterar para ${novoStatus}?`)) return
-    await supabase.from('ordens_servico').update({ status: novoStatus, cancelada: novoStatus === 'Cancelado' }).eq('id', ordem.id)
-    carregarDados()
-  }
-
   const clean = tema === 'clean'
-  const encerrada = ordem?.status === 'Finalizado' || ordem?.status === 'Cancelado'
 
   if (carregando) return <div className="min-h-screen flex items-center justify-center font-bold">Carregando...</div>
 
   return (
-    <div className={`min-h-screen pb-32 transition-colors duration-300 ${clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'}`}>
+    <div className={`min-h-screen pb-32 ${clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'}`}>
       
-      <div ref={printRef} className="pt-6">
-        <main className="max-w-md mx-auto px-5">
-          
-          {/* HEADER */}
-          <div className="flex items-center justify-between gap-3 mb-6">
-            <button onClick={() => router.push('/ordens')} className={`w-12 h-12 rounded-2xl flex items-center justify-center border no-print ${clean ? 'bg-white border-slate-200 text-slate-600' : 'bg-[#0d1726] border-slate-700 text-white'}`}>
-              <ChevronLeft size={24} />
-            </button>
-            <div className="flex-1">
-              <h1 className="text-lg font-black uppercase italic tracking-tighter">OS #{ordem?.numero_os ?? ordem?.id}</h1>
-              <span className={badgeEstilo(ordem?.status || '')}>{ordem?.status}</span>
+      {/* BOTÕES DE AÇÃO (MOBILE) */}
+      <div className="max-w-md mx-auto px-5 pt-6 flex items-center justify-between no-print">
+        <button onClick={() => router.push('/ordens')} className="p-3 rounded-xl border border-slate-700 bg-[#0d1726]">
+          <ChevronLeft size={24} />
+        </button>
+        <div className="flex gap-2">
+          <button onClick={gerarPDF} disabled={gerandoPDF} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase">
+            {gerandoPDF ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            PDF
+          </button>
+        </div>
+      </div>
+
+      {/* --- MODELO DE RELATÓRIO (O QUE VAI PARA O PDF) --- */}
+      <div ref={printRef} className="bg-white text-slate-900 p-0 sm:p-4 max-w-[800px] mx-auto overflow-hidden">
+        
+        {/* CABEÇALHO ESTILO DIVISA */}
+        <header className="relative flex justify-between items-start bg-[#001529] text-white p-8 rounded-b-[40px] mb-8">
+          <div className="z-10">
+            <div className="flex items-center gap-2 mb-4">
+               <div className="w-10 h-10 bg-yellow-500 rounded flex items-center justify-center text-black font-black">D</div>
+               <span className="text-2xl font-black tracking-tighter uppercase italic">Divisa <span className="text-yellow-500 text-xs block -mt-2">TORNEARIA</span></span>
             </div>
-            <div className="no-print flex gap-2">
-              <button onClick={gerarPDF} disabled={gerandoPDF} className="w-10 h-10 flex items-center justify-center text-blue-500 bg-blue-500/10 rounded-xl">
-                {gerandoPDF ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-              </button>
-              <button onClick={() => setModalEdicao(true)} className="w-10 h-10 flex items-center justify-center text-blue-500 bg-blue-500/10 rounded-xl"><Pencil size={18} /></button>
+            <h1 className="text-2xl font-black uppercase tracking-tight">Relatório de Serviço</h1>
+            <p className="opacity-60 text-xs font-bold uppercase mb-4">Ordem de Serviço</p>
+            <h2 className="text-4xl font-black text-blue-400 mb-4">OS #{ordem?.numero_os || ordem?.id}</h2>
+            <div className="bg-emerald-600 px-6 py-1 rounded-full inline-block text-[10px] font-black uppercase italic">
+              {ordem?.status}
             </div>
           </div>
 
-          {/* CONTROLE DE OPERAÇÃO */}
-          {!encerrada && (
-            <section className={`no-print mb-6 p-4 rounded-3xl border ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-800'}`}>
-              <div className="flex gap-2">
-                <button onClick={() => atualizarStatusExecucao('Em andamento')} className={`flex-1 py-4 rounded-xl border flex items-center justify-center gap-2 font-black text-[10px] uppercase ${ordem?.status === 'Em andamento' ? 'bg-blue-600 text-white border-blue-400' : clean ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                  <PlayCircle size={18} /> Andamento
-                </button>
-                <button onClick={() => atualizarStatusExecucao('Parado')} className={`flex-1 py-4 rounded-xl border flex items-center justify-center gap-2 font-black text-[10px] uppercase ${ordem?.status === 'Parado' ? 'bg-amber-500 text-white border-amber-400' : clean ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                  <PauseCircle size={18} /> Parar
-                </button>
+          <div className="z-10 text-right space-y-6 mt-2">
+            <div className="flex items-center justify-end gap-3">
+              <div className="text-right">
+                <p className="text-[10px] font-bold opacity-50 uppercase">Data</p>
+                <p className="text-sm font-black">{new Date(ordem?.created_at).toLocaleDateString()}</p>
               </div>
-
-              {(mostrarCampoAndamento || mostrarCampoParada) && (
-                <div className="mt-4 space-y-3">
-                  {mostrarCampoAndamento && (
-                    <>
-                      <input value={tecnicoAtuante} onChange={e => setTecnicoAtuante(e.target.value)} placeholder="Técnico" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
-                      <textarea value={atividadeExecutada} onChange={e => setAtividadeExecutada(e.target.value)} placeholder="Atividade" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
-                      <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px]">Confirmar Início</button>
-                    </>
-                  )}
-                  {mostrarCampoParada && (
-                    <>
-                      <textarea value={motivoParada} onChange={e => setMotivoParada(e.target.value)} placeholder="Motivo da parada" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
-                      <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 text-white rounded-xl font-black uppercase text-[10px]">Confirmar Parada</button>
-                    </>
-                  )}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* INFOS */}
-          <div className={`rounded-3xl p-6 mb-5 border ${clean ? 'bg-white border-slate-100 shadow-sm' : 'bg-[#0d1726] border-slate-800'}`}>
-            <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-              <InfoItem clean={clean} Icone={User} titulo="Cliente" texto={ordem?.cliente} />
-              <InfoItem clean={clean} Icone={Monitor} titulo="Máquina" texto={ordem?.maquina} />
-              <InfoItem clean={clean} Icone={Users} titulo="Solicitante" texto={ordem?.solicitante || '-'} />
-              <InfoItem clean={clean} Icone={User} titulo="Técnico" texto={ordem?.usuario_responsavel || '-'} />
-              <InfoItem clean={clean} Icone={FileText} titulo="Descrição" texto={ordem?.descricao} full />
+              <Calendar className="text-blue-400" size={24} />
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <div className="text-right">
+                <p className="text-[10px] font-bold opacity-50 uppercase">Técnico Responsável</p>
+                <p className="text-sm font-black">{ordem?.usuario_responsavel || 'Jackson'}</p>
+              </div>
+              <User className="text-blue-400" size={24} />
             </div>
           </div>
 
-          {/* FOTOS */}
-          <div className={`rounded-3xl p-6 mb-5 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
-            <h2 className="text-[10px] font-black uppercase mb-4 text-blue-500">Fotos de Campo</h2>
-            <div className="no-print mb-4">
-               <label className="w-full py-3 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase cursor-pointer">
-                 <Camera size={14}/> Tirar Foto
-                 <input type="file" hidden capture="environment" onChange={handleAddFoto} />
-               </label>
+          {/* Efeito Decorativo do Fundo */}
+          <div className="absolute top-0 right-0 w-1/3 h-full bg-blue-600/10 rounded-bl-full pointer-events-none"></div>
+        </header>
+
+        <div className="px-8 pb-12">
+          {/* SEÇÃO: DADOS DA OS */}
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4 border-b-2 border-slate-100 pb-2">
+              <ClipboardList size={18} className="text-blue-600" />
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Dados da Ordem de Serviço</h3>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {fotos.map(f => (
-                <img 
-                  key={f.id} 
-                  src={f.url} 
-                  crossOrigin="anonymous" // OBRIGATÓRIO PARA O PDF FUNCIONAR COM SUPABASE
-                  onClick={() => setFotoExpandida(f.url)} // ABRE A FOTO
-                  className="w-full h-32 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
-                />
+            <div className="grid grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+              <InfoRelatorio Icone={User} label="Cliente" valor={ordem?.cliente} />
+              <InfoRelatorio Icone={Monitor} label="Máquina" valor={ordem?.maquina} />
+              <InfoRelatorio Icone={Users} label="Solicitante" valor={ordem?.solicitante || 'Não Informado'} />
+              <InfoRelatorio Icone={User} label="Técnico" valor={ordem?.usuario_responsavel || 'Jackson'} />
+              <div className="col-span-2 pt-4 border-t border-slate-200">
+                <div className="flex gap-3">
+                  <div className="p-2 bg-white rounded-xl border border-slate-200 shrink-0"><FileText size={16} className="text-blue-600"/></div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-400">Descrição</p>
+                    <p className="text-xs font-bold leading-relaxed">{ordem?.descricao}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEÇÃO: FOTOS E MATERIAIS */}
+          <div className="grid grid-cols-5 gap-6 mb-10">
+            <div className="col-span-3">
+              <div className="flex items-center gap-2 mb-4 border-b-2 border-slate-100 pb-2">
+                <Camera size={18} className="text-blue-600" />
+                <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Fotos de Campo</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {fotos.slice(0, 2).map(f => (
+                  <img key={f.id} src={f.url} crossOrigin="anonymous" className="w-full h-56 object-cover rounded-[30px] border-4 border-white shadow-sm" />
+                ))}
+              </div>
+            </div>
+
+            <div className="col-span-2">
+              <div className="flex items-center gap-2 mb-4 border-b-2 border-slate-100 pb-2">
+                <Package size={18} className="text-blue-600" />
+                <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Peças / Materiais</h3>
+              </div>
+              <div className="bg-white border-2 border-dashed border-slate-200 rounded-[30px] p-6 h-fit">
+                 {materiais.length > 0 ? materiais.map(m => (
+                   <div key={m.id} className="flex justify-between items-center mb-4 last:mb-0">
+                     <span className="text-[10px] font-black uppercase tracking-tighter">{m.descricao}</span>
+                     <span className="text-xs font-black text-blue-600">x{m.quantidade}</span>
+                   </div>
+                 )) : <p className="text-[10px] opacity-40 italic">Nenhum material listado</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* SEÇÃO: HISTÓRICO */}
+          <div className="mb-12">
+            <div className="flex items-center gap-2 mb-4 border-b-2 border-slate-100 pb-2">
+              <Clock size={18} className="text-blue-600" />
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Histórico</h3>
+            </div>
+            <div className="space-y-3">
+              {atualizacoes.slice(0, 3).map(at => (
+                <div key={at.id} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-start gap-4">
+                  <div className="w-2 h-2 rounded-full bg-purple-600 mt-1.5 shrink-0"></div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase text-purple-600 mb-1">
+                      {new Date(at.created_at).toLocaleDateString()} - {at.tecnicos_responsaveis || at.usuario_nome || 'Jackson'}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase leading-tight">{at.descricao}</p>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* MATERIAIS */}
-          <div className="mb-5">
-            <button onClick={() => router.push(`/ordens/${id_os}/material`)} className="no-print w-full py-4 mb-4 border-2 border-dashed border-blue-500/20 rounded-2xl text-blue-400 font-black uppercase text-[10px]">Adicionar Materiais</button>
-            {materiais.length > 0 && (
-              <div className={`rounded-3xl p-6 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
-                <h2 className="text-[10px] font-black uppercase mb-4">Peças / Materiais</h2>
-                {materiais.map(m => (
-                  <div key={m.id} className="mb-3 pb-3 border-b border-white/5 last:border-0">
-                    <p className="text-xs font-bold uppercase">{m.descricao} <span className="text-blue-500 ml-1">x{m.quantidade}</span></p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* HISTÓRICO */}
-          <div className={`rounded-3xl p-6 mb-10 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
-            <h2 className="text-[10px] font-black uppercase mb-6 text-purple-500">Histórico</h2>
-            <div className="space-y-5">
-                {atualizacoes.map(at => (
-                  <div key={at.id} className="border-l-2 border-purple-500/30 pl-4">
-                    <p className="text-[9px] font-black uppercase opacity-40">{new Date(at.created_at).toLocaleDateString()} - {at.tecnicos_responsaveis || at.usuario_nome}</p>
-                    <p className="text-xs font-medium mt-1">{at.descricao}</p>
-                  </div>
-                ))}
+          {/* ASSINATURA */}
+          <div className="flex justify-end mt-16">
+            <div className="w-64 border-2 border-slate-100 p-6 rounded-[30px] text-center">
+               <p className="text-[10px] font-black uppercase mb-8">Recebido por</p>
+               <div className="border-b border-slate-300 w-full mb-2"></div>
+               <p className="text-[8px] font-bold opacity-40 uppercase tracking-widest">Data: ___/___/___</p>
             </div>
           </div>
+        </div>
 
-          {/* AÇÕES */}
-          {!encerrada && (
-            <div className="no-print grid grid-cols-2 gap-4 mb-10">
-              <button onClick={() => alterarStatus('Cancelado')} className="p-4 rounded-3xl bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-2"><XCircle size={20}/> Cancelar</button>
-              <button onClick={() => alterarStatus('Finalizado')} className="p-4 rounded-3xl bg-emerald-500 text-white text-[10px] font-black uppercase flex flex-col items-center gap-2"><CheckCircle2 size={20}/> Finalizar</button>
-            </div>
-          )}
-        </main>
+        {/* RODAPÉ */}
+        <footer className="bg-slate-900 text-white p-6 flex justify-between items-center rounded-t-[30px]">
+           <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-yellow-500 rounded flex items-center justify-center text-black font-black text-[10px]">D</div>
+              <span className="text-xs font-black uppercase italic italic">Divisa</span>
+           </div>
+           <p className="text-[9px] font-bold opacity-60 uppercase tracking-tighter">
+             Obrigado por confiar em nosso trabalho! Qualidade e segurança em cada serviço.
+           </p>
+        </footer>
       </div>
 
-      {/* MODAL VISUALIZAÇÃO DE FOTO (ADICIONADO) */}
+      {/* MODAL FOTO EXPANDIDA (APENAS TELA) */}
       {fotoExpandida && (
-        <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4" onClick={() => setFotoExpandida(null)}>
-          <button className="absolute top-6 right-6 text-white bg-white/10 p-2 rounded-full"><X size={32}/></button>
-          <img src={fotoExpandida} className="max-w-full max-h-full rounded-lg shadow-2xl" />
-        </div>
-      )}
-
-      {/* MENU INFERIOR */}
-      <nav className={`no-print fixed bottom-0 left-0 right-0 border-t py-4 px-6 z-50 ${clean ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#07111f] border-slate-800 text-white'}`}>
-        <div className="max-w-md mx-auto flex justify-between items-center">
-            <MenuNav titulo="Home" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
-            <MenuNav ativo titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
-            <MenuNav titulo="Faturas" Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
-            <MenuNav titulo="Ajustes" Icone={Settings} onClick={() => router.push('/configuracao')} />
-        </div>
-      </nav>
-
-      {/* MODAL EDIÇÃO */}
-      {modalEdicao && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-            <div className={`w-full max-w-sm rounded-[32px] p-8 border ${clean ? 'bg-white text-black' : 'bg-[#0d1726] border-slate-700 text-white'}`}>
-                <h2 className="text-lg font-black uppercase mb-6 italic">Editar OS</h2>
-                <div className="space-y-4">
-                    <input value={editForm.cliente} onChange={e => setEditForm({...editForm, cliente: e.target.value})} className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Cliente" />
-                    <input value={editForm.maquina} onChange={e => setEditForm({...editForm, maquina: e.target.value})} className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Máquina" />
-                    <textarea value={editForm.descricao} onChange={e => setEditForm({...editForm, descricao: e.target.value})} className={`w-full p-3 rounded-xl border min-h-[100px] ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Descrição" />
-                    <button onClick={salvarEdicaoOS} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase">{salvandoEdicao ? 'Salvando...' : 'Salvar'}</button>
-                    <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold uppercase mt-2 opacity-50">Fechar</button>
-                </div>
-            </div>
+        <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4 no-print" onClick={() => setFotoExpandida(null)}>
+          <button className="absolute top-6 right-6 text-white"><X size={32}/></button>
+          <img src={fotoExpandida} className="max-w-full max-h-full rounded-lg" />
         </div>
       )}
     </div>
   )
 }
 
-function InfoItem({ Icone, titulo, texto, full, clean }: any) {
+function InfoRelatorio({ Icone, label, valor }: any) {
   return (
-    <div className={`${full ? 'col-span-2' : ''} flex gap-3`}>
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${clean ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400'}`}><Icone size={16}/></div>
+    <div className="flex gap-3">
+      <div className="w-10 h-10 bg-white rounded-xl border border-slate-200 flex items-center justify-center shrink-0">
+        <Icone size={18} className="text-blue-600" />
+      </div>
       <div>
-        <p className="text-[9px] font-black uppercase opacity-40">{titulo}</p>
-        <p className="text-xs font-bold leading-tight">{texto}</p>
+        <p className="text-[10px] font-black uppercase text-slate-400">{label}</p>
+        <p className="text-xs font-black uppercase">{valor || '-'}</p>
       </div>
     </div>
   )
-}
-
-function MenuNav({ titulo, Icone, ativo, onClick }: any) {
-  return (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${ativo ? 'text-blue-500' : 'text-slate-500'}`}>
-      <Icone size={20}/><span className="text-[9px] font-black uppercase">{titulo}</span>
-    </button>
-  )
-}
-
-function badgeEstilo(status: string) {
-  const base = "text-[9px] font-black px-2 py-0.5 rounded border uppercase "
-  if (status === 'Finalizado') return base + 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-  if (status === 'Cancelado') return base + 'bg-rose-500/10 border-rose-500/20 text-rose-500'
-  if (status === 'Parado') return base + 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-  return base + 'bg-blue-500/10 border-blue-500/20 text-blue-500'
 }
