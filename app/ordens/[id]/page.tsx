@@ -37,7 +37,7 @@ export default function DetalhesOSPage() {
   })
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
-  // Estados para inputs de status e fotos
+  // Estados para inputs de status
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
   const [atividadeExecutada, setAtividadeExecutada] = useState('')
   const [mostrarCampoAndamento, setMostrarCampoAndamento] = useState(false)
@@ -83,13 +83,15 @@ export default function DetalhesOSPage() {
     await supabase.from('os_atualizacoes').insert([{
       ordem_servico_id: ordem.id,
       descricao: descricaoAtividade,
-      usuario_nome: tecnicoAtuante || 'Técnico'
+      usuario_nome: tecnicoAtuante || 'Técnico',
+      tipo_status: novoStatus // Campo para controlar a cor da bolinha no histórico
     }])
     
     setMostrarCampoAndamento(false)
     setMostrarCampoParada(false)
     setAtividadeExecutada('')
     setMotivoParada('')
+    setTecnicoAtuante('')
     carregarDados()
   }
 
@@ -213,7 +215,7 @@ export default function DetalhesOSPage() {
             <InfoBox label="Cliente" value={ordem?.cliente} clean={clean} Icon={User} />
             <InfoBox label="Máquina" value={ordem?.maquina} clean={clean} Icon={Monitor} />
             <InfoBox label="Solicitante" value={ordem?.solicitante || '-'} clean={clean} Icon={Users} />
-            <InfoBox label="Técnico" value={ordem?.usuario_responsavel || 'Aguardando'} clean={clean} Icon={User} />
+            <InfoBox label="Responsável" value={ordem?.usuario_responsavel || 'Aguardando'} clean={clean} Icon={User} />
             <div className="col-span-2 pt-2">
               <p className="text-[10px] font-black uppercase text-blue-500 mb-2">Descrição</p>
               <p className="text-xs font-medium opacity-70 leading-relaxed">{ordem?.descricao}</p>
@@ -221,7 +223,7 @@ export default function DetalhesOSPage() {
           </div>
         </div>
 
-        {/* CONTROLES DE STATUS (CINZA POR PADRÃO) */}
+        {/* CONTROLES DE STATUS */}
         <div className="grid grid-cols-2 gap-3 mb-4">
             <button 
               onClick={() => { setMostrarCampoAndamento(true); setMostrarCampoParada(false); }}
@@ -237,33 +239,41 @@ export default function DetalhesOSPage() {
             </button>
         </div>
 
-        {/* INPUTS DE STATUS */}
+        {/* INPUTS DE STATUS (ABRE FORMULÁRIO) */}
         {mostrarCampoAndamento && (
           <div className={`mb-6 p-5 rounded-3xl border-2 border-blue-500/30 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
-            <textarea value={atividadeExecutada} onChange={(e) => setAtividadeExecutada(e.target.value)} className={`w-full p-4 rounded-xl text-xs mb-3 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`} placeholder="O que está sendo feito?" />
-            <button onClick={() => alterarStatus('Em Andamento', atividadeExecutada)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase">Confirmar Início</button>
+            <p className="text-[10px] font-black uppercase text-blue-500 mb-3 italic">Relatar Atividade</p>
+            <input 
+              value={tecnicoAtuante} 
+              onChange={(e) => setTecnicoAtuante(e.target.value)} 
+              className={`w-full p-4 rounded-xl text-xs mb-2 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`} 
+              placeholder="Nome do Técnico" 
+            />
+            <textarea 
+              value={atividadeExecutada} 
+              onChange={(e) => setAtividadeExecutada(e.target.value)} 
+              className={`w-full p-4 rounded-xl text-xs mb-3 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`} 
+              placeholder="O que está sendo executado?" 
+            />
+            <button onClick={() => alterarStatus('Em Andamento', atividadeExecutada)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase">Registrar Início</button>
           </div>
         )}
         {mostrarCampoParada && (
           <div className={`mb-6 p-5 rounded-3xl border-2 border-amber-500/30 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
-            <textarea value={motivoParada} onChange={(e) => setMotivoParada(e.target.value)} className={`w-full p-4 rounded-xl text-xs mb-3 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`} placeholder="Motivo da parada..." />
-            <button onClick={() => alterarStatus('Parado', motivoParada)} className="w-full py-3 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase">Confirmar Parada</button>
+            <p className="text-[10px] font-black uppercase text-amber-500 mb-3 italic">Motivo da Pausa</p>
+            <textarea 
+              value={motivoParada} 
+              onChange={(e) => setMotivoParada(e.target.value)} 
+              className={`w-full p-4 rounded-xl text-xs mb-3 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`} 
+              placeholder="Ex: Aguardando peça, fim do expediente..." 
+            />
+            <button onClick={() => alterarStatus('Parado', motivoParada)} className="w-full py-3 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase">Registrar Parada</button>
           </div>
         )}
 
-        {/* BOTÕES DE FINALIZAÇÃO E CANCELAMENTO */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-            <button onClick={finalizarOS} className="flex items-center justify-center gap-2 py-4 bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 rounded-2xl font-black text-[10px] uppercase">
-              <CheckCircle size={18} /> Finalizar OS
-            </button>
-            <button onClick={cancelarOS} className="flex items-center justify-center gap-2 py-4 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl font-black text-[10px] uppercase">
-              <Trash2 size={18} /> Cancelar OS
-            </button>
-        </div>
-
         {/* GALERIA */}
         <div className={`rounded-[32px] p-6 mb-6 border ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
-          <h2 className="text-[10px] font-black uppercase text-blue-500 mb-4">Fotos</h2>
+          <h2 className="text-[10px] font-black uppercase text-blue-500 mb-4">Fotos de Campo</h2>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <label className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 rounded-2xl cursor-pointer text-white">
               <Camera size={20} /><span className="text-[9px] font-black uppercase">Câmera</span>
@@ -280,21 +290,33 @@ export default function DetalhesOSPage() {
         </div>
 
         {/* BOTÃO MATERIAL */}
-        <button onClick={() => router.push(`/ordens/${id_os}/material`)} className="w-full py-5 mb-6 rounded-[32px] border-2 border-dashed border-blue-500/30 text-blue-500 text-[10px] font-black uppercase tracking-widest">+ Adicionar Materiais</button>
+        <button onClick={() => router.push(`/ordens/${id_os}/material`)} className="w-full py-5 mb-6 rounded-[32px] border-2 border-dashed border-blue-500/30 text-blue-500 text-[10px] font-black uppercase tracking-widest">+ Adicionar Materiais / Peças</button>
 
-        {/* HISTÓRICO */}
+        {/* HISTÓRICO COM CORES NAS BOLINHAS */}
         <div className={`rounded-[32px] p-6 mb-6 border ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
-          <h2 className="text-[10px] font-black uppercase text-purple-500 mb-6">Histórico</h2>
+          <h2 className="text-[10px] font-black uppercase text-purple-500 mb-6 italic">Linha do Tempo</h2>
           <div className="space-y-6">
             {atualizacoes.map((at) => (
-              <div key={at.id} className="relative pl-6 border-l-2 border-purple-500/20">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#07111f] border-2 border-purple-500" />
+              <div key={at.id} className={`relative pl-6 border-l-2 ${at.tipo_status === 'Parado' ? 'border-amber-500/20' : 'border-blue-500/20'}`}>
+                {/* Bolinha com cor dinâmica */}
+                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#07111f] border-2 ${at.tipo_status === 'Parado' ? 'border-amber-500' : 'border-blue-500'}`} />
+                
                 <p className="text-[10px] font-black uppercase opacity-40 mb-1">{new Date(at.created_at).toLocaleString()}</p>
-                <p className="text-xs font-bold text-blue-400 mb-1">{at.usuario_nome}</p>
-                <p className="text-xs opacity-70 leading-relaxed">{at.descricao}</p>
+                <p className={`text-xs font-black mb-1 ${at.tipo_status === 'Parado' ? 'text-amber-500' : 'text-blue-400'}`}>{at.usuario_nome}</p>
+                <p className="text-xs opacity-70 leading-relaxed italic">"{at.descricao}"</p>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* BOTÕES DE FINALIZAÇÃO E CANCELAMENTO (ABAIXO DO HISTÓRICO) */}
+        <div className="grid grid-cols-2 gap-3 mb-10">
+            <button onClick={finalizarOS} className="flex items-center justify-center gap-2 py-5 bg-emerald-600/10 text-emerald-500 border border-emerald-500/20 rounded-3xl font-black text-[10px] uppercase shadow-lg shadow-emerald-500/5">
+              <CheckCircle size={20} /> Finalizar OS
+            </button>
+            <button onClick={cancelarOS} className="flex items-center justify-center gap-2 py-5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-3xl font-black text-[10px] uppercase shadow-lg shadow-red-500/5">
+              <Trash2 size={20} /> Cancelar OS
+            </button>
         </div>
       </main>
 
@@ -302,14 +324,14 @@ export default function DetalhesOSPage() {
       {modalEdicao && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
           <div className={`w-full max-w-sm rounded-[32px] p-8 border ${clean ? 'bg-white text-black' : 'bg-[#0d1726] border-slate-700 text-white'}`}>
-            <h2 className="text-lg font-black uppercase mb-6">Editar Dados</h2>
+            <h2 className="text-lg font-black uppercase mb-6 italic tracking-tighter">Editar Informações</h2>
             <div className="space-y-4">
               <input value={editForm.cliente} onChange={e => setEditForm({...editForm, cliente: e.target.value})} className={`w-full p-4 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Cliente" />
               <input value={editForm.solicitante} onChange={e => setEditForm({...editForm, solicitante: e.target.value})} className={`w-full p-4 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Solicitante" />
               <input value={editForm.maquina} onChange={e => setEditForm({...editForm, maquina: e.target.value})} className={`w-full p-4 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Máquina" />
-              <textarea value={editForm.descricao} onChange={e => setEditForm({...editForm, descricao: e.target.value})} className={`w-full p-4 rounded-xl border min-h-[100px] ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Descrição" />
-              <button onClick={salvarEdicaoOS} disabled={salvandoEdicao} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase">{salvandoEdicao ? 'Salvando...' : 'Confirmar'}</button>
-              <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold uppercase opacity-50">Cancelar</button>
+              <textarea value={editForm.descricao} onChange={e => setEditForm({...editForm, descricao: e.target.value})} className={`w-full p-4 rounded-xl border min-h-[100px] ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Descrição do Problema" />
+              <button onClick={salvarEdicaoOS} disabled={salvandoEdicao} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg shadow-blue-600/20">{salvandoEdicao ? 'Salvando...' : 'Confirmar Alterações'}</button>
+              <button onClick={() => setModalEdicao(false)} className="w-full text-xs font-bold uppercase opacity-50 pt-2">Voltar</button>
             </div>
           </div>
         </div>
@@ -328,7 +350,7 @@ export default function DetalhesOSPage() {
 
 function NavItem({ Icon, label, active, onClick }: any) {
   return (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-blue-500' : 'text-slate-500'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-blue-500 scale-105' : 'text-slate-500'}`}>
       <Icon size={20} strokeWidth={active ? 3 : 2} />
       <span className="text-[9px] font-black uppercase tracking-tighter">{label}</span>
     </button>
@@ -341,7 +363,7 @@ function InfoBox({ label, value, Icon, clean }: any) {
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${clean ? 'bg-blue-50 text-blue-600' : 'bg-blue-600/10 text-blue-400'}`}><Icon size={18} /></div>
       <div className="overflow-hidden">
         <p className="text-[9px] font-black uppercase opacity-40 mb-0.5">{label}</p>
-        <p className="text-xs font-bold truncate">{value || '-'}</p>
+        <p className="text-xs font-bold truncate tracking-tight">{value || '-'}</p>
       </div>
     </div>
   )
