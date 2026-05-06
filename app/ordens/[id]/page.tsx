@@ -7,7 +7,7 @@ import {
   ChevronLeft, ClipboardList, User, Monitor, 
   FileText, Camera, Users, LayoutGrid, 
   CircleDollarSign, Settings, CheckCircle2, XCircle, Loader2,
-  PlayCircle, PauseCircle, Pencil, Download, X
+  PlayCircle, PauseCircle, Pencil, Download, X, ImagePlus
 } from 'lucide-react'
 
 import jsPDF from 'jspdf'
@@ -71,6 +71,7 @@ export default function DetalhesOSPage() {
   const [mostrarCampoParada, setMostrarCampoParada] = useState(false)
   const [gerandoPDF, setGerandoPDF] = useState(false)
   const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
+  const [subindoFoto, setSubindoFoto] = useState(false)
 
   const [modalEdicao, setModalEdicao] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -115,8 +116,6 @@ export default function DetalhesOSPage() {
   async function gerarPDF() {
     if (!printRef.current) return
     setGerandoPDF(true)
-    
-    // Aguarda um momento para garantir que as imagens carregaram com crossOrigin
     await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
@@ -139,7 +138,7 @@ export default function DetalhesOSPage() {
       pdf.save(`OS_${ordem?.numero_os || id_os}.pdf`)
     } catch (error) {
       console.error(error)
-      alert("Erro ao gerar PDF. Verifique se as imagens carregaram corretamente.")
+      alert("Erro ao gerar PDF.")
     } finally {
       setGerandoPDF(false)
     }
@@ -180,13 +179,25 @@ export default function DetalhesOSPage() {
   }
 
   async function handleAddFoto(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files || !ordem) return
-    const file = e.target.files[0]
-    const nomeArquivo = `${ordem.id}/${Date.now()}-${file.name}`
-    await supabase.storage.from('os-imagens').upload(nomeArquivo, file)
-    const { data: { publicUrl } } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
-    await supabase.from('fotos_os').insert([{ id_os: ordem.id, url: publicUrl }])
-    carregarDados()
+    if (!e.target.files || !ordem || e.target.files.length === 0) return
+    setSubindoFoto(true)
+    try {
+      const file = e.target.files[0]
+      const nomeArquivo = `${ordem.id}/${Date.now()}-${file.name}`
+      
+      const { error: uploadError } = await supabase.storage.from('os-imagens').upload(nomeArquivo, file)
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage.from('os-imagens').getPublicUrl(nomeArquivo)
+      await supabase.from('fotos_os').insert([{ id_os: ordem.id, url: publicUrl }])
+      
+      carregarDados()
+    } catch (error) {
+      console.error(error)
+      alert("Erro ao subir imagem.")
+    } finally {
+      setSubindoFoto(false)
+    }
   }
 
   async function alterarStatus(novoStatus: string) {
@@ -268,20 +279,32 @@ export default function DetalhesOSPage() {
 
           {/* FOTOS */}
           <div className={`rounded-3xl p-6 mb-5 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
-            <h2 className="text-[10px] font-black uppercase mb-4 text-blue-500">Fotos de Campo</h2>
-            <div className="no-print mb-4">
-               <label className="w-full py-3 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase cursor-pointer">
-                 <Camera size={14}/> Tirar Foto
-                 <input type="file" hidden capture="environment" onChange={handleAddFoto} />
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-[10px] font-black uppercase text-blue-500">Fotos de Campo</h2>
+              {subindoFoto && <Loader2 size={14} className="animate-spin text-blue-500" />}
+            </div>
+            
+            <div className="no-print grid grid-cols-2 gap-3 mb-6">
+               <label className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-2xl cursor-pointer hover:bg-blue-700 transition-all active:scale-95">
+                 <Camera size={20}/>
+                 <span className="text-[9px] font-black uppercase">Câmera</span>
+                 <input type="file" hidden capture="environment" accept="image/*" onChange={handleAddFoto} disabled={subindoFoto} />
+               </label>
+
+               <label className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all active:scale-95 ${clean ? 'border-slate-200 text-slate-500 hover:bg-slate-50' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}>
+                 <ImagePlus size={20}/>
+                 <span className="text-[9px] font-black uppercase">Galeria</span>
+                 <input type="file" hidden accept="image/*" onChange={handleAddFoto} disabled={subindoFoto} />
                </label>
             </div>
+
             <div className="grid grid-cols-2 gap-2">
               {fotos.map(f => (
                 <img 
                   key={f.id} 
                   src={f.url} 
-                  crossOrigin="anonymous" // OBRIGATÓRIO PARA O PDF FUNCIONAR COM SUPABASE
-                  onClick={() => setFotoExpandida(f.url)} // ABRE A FOTO
+                  crossOrigin="anonymous" 
+                  onClick={() => setFotoExpandida(f.url)} 
                   className="w-full h-32 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
                 />
               ))}
@@ -326,7 +349,7 @@ export default function DetalhesOSPage() {
         </main>
       </div>
 
-      {/* MODAL VISUALIZAÇÃO DE FOTO (ADICIONADO) */}
+      {/* MODAL VISUALIZAÇÃO DE FOTO */}
       {fotoExpandida && (
         <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4" onClick={() => setFotoExpandida(null)}>
           <button className="absolute top-6 right-6 text-white bg-white/10 p-2 rounded-full"><X size={32}/></button>
