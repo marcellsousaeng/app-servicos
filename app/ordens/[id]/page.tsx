@@ -85,6 +85,23 @@ export default function DetalhesOSPage() {
     setSalvandoEdicao(false)
   }
 
+  async function alterarStatus(novoStatus: string, descricaoAtividade: string) {
+    if (!descricaoAtividade) return alert("Descreva a atividade ou motivo.")
+    
+    await supabase.from('ordens_servico').update({ status: novoStatus }).eq('id', ordem.id)
+    await supabase.from('os_atualizacoes').insert([{
+      ordem_servico_id: ordem.id,
+      descricao: descricaoAtividade,
+      usuario_nome: tecnicoAtuante || 'Técnico'
+    }])
+    
+    setMostrarCampoAndamento(false)
+    setMostrarCampoParada(false)
+    setAtividadeExecutada('')
+    setMotivoParada('')
+    carregarDados()
+  }
+
   async function gerarPDF() {
     if (!ordem) return
     setGerandoPDF(true)
@@ -114,12 +131,10 @@ export default function DetalhesOSPage() {
             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
               <p style="margin: 0 0 5px 0; font-size: 10px; font-weight: bold; color: #2563eb; text-transform: uppercase;">Cliente</p>
               <p style="margin: 0; font-size: 14px; font-weight: bold;">${ordem.cliente}</p>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">Solicitante: ${ordem.solicitante || '-'}</p>
             </div>
             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
               <p style="margin: 0 0 5px 0; font-size: 10px; font-weight: bold; color: #2563eb; text-transform: uppercase;">Equipamento</p>
               <p style="margin: 0; font-size: 14px; font-weight: bold;">${ordem.maquina}</p>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">Responsável: ${ordem.usuario_responsavel || '-'}</p>
             </div>
           </div>
 
@@ -222,6 +237,49 @@ export default function DetalhesOSPage() {
           </div>
         </div>
 
+        {/* CONTROLES DE STATUS (ANDAMENTO / PARADA) */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+            <button 
+              onClick={() => { setMostrarCampoAndamento(true); setMostrarCampoParada(false); }}
+              className="flex items-center justify-center gap-2 py-4 bg-emerald-500 rounded-2xl text-white font-black text-[10px] uppercase shadow-lg shadow-emerald-500/20"
+            >
+              <PlayCircle size={18} /> Em Andamento
+            </button>
+            <button 
+              onClick={() => { setMostrarCampoParada(true); setMostrarCampoAndamento(false); }}
+              className="flex items-center justify-center gap-2 py-4 bg-amber-500 rounded-2xl text-white font-black text-[10px] uppercase shadow-lg shadow-amber-500/20"
+            >
+              <PauseCircle size={18} /> Parar Serviço
+            </button>
+        </div>
+
+        {/* CAMPOS DE INPUT PARA STATUS */}
+        {mostrarCampoAndamento && (
+          <div className={`mb-6 p-5 rounded-3xl border-2 border-emerald-500/30 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
+            <p className="text-[10px] font-black uppercase text-emerald-500 mb-3">Relatar Início/Continuação</p>
+            <textarea 
+              value={atividadeExecutada}
+              onChange={(e) => setAtividadeExecutada(e.target.value)}
+              className={`w-full p-4 rounded-xl text-xs mb-3 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`}
+              placeholder="O que está sendo feito?"
+            />
+            <button onClick={() => alterarStatus('Em Andamento', atividadeExecutada)} className="w-full py-3 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase">Confirmar</button>
+          </div>
+        )}
+
+        {mostrarCampoParada && (
+          <div className={`mb-6 p-5 rounded-3xl border-2 border-amber-500/30 ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}>
+            <p className="text-[10px] font-black uppercase text-amber-500 mb-3">Motivo da Parada</p>
+            <textarea 
+              value={motivoParada}
+              onChange={(e) => setMotivoParada(e.target.value)}
+              className={`w-full p-4 rounded-xl text-xs mb-3 border ${clean ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'}`}
+              placeholder="Ex: Aguardando peça, horário de almoço..."
+            />
+            <button onClick={() => alterarStatus('Parado', motivoParada)} className="w-full py-3 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase">Pausar OS</button>
+          </div>
+        )}
+
         {/* GALERIA */}
         <div className={`rounded-[32px] p-6 mb-6 border ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
           <h2 className="text-[10px] font-black uppercase text-blue-500 mb-4">Fotos</h2>
@@ -240,6 +298,26 @@ export default function DetalhesOSPage() {
           </div>
         </div>
 
+        {/* BOTAO MATERIAIS - AGORA ACIMA DO HISTÓRICO */}
+        <div className="mb-6">
+          <button 
+            onClick={() => router.push(`/ordens/${id_os}/material`)} 
+            className="w-full py-5 rounded-[32px] border-2 border-dashed border-blue-500/30 text-blue-500 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform"
+          >
+            + Peças e Materiais
+          </button>
+          {materiais.length > 0 && (
+            <div className={`mt-3 p-4 rounded-2xl border ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
+               {materiais.map(m => (
+                 <div key={m.id} className="flex justify-between items-center py-1 text-[11px] font-bold">
+                   <span className="opacity-70 uppercase">{m.descricao}</span>
+                   <span className="text-blue-500">x{m.quantidade}</span>
+                 </div>
+               ))}
+            </div>
+          )}
+        </div>
+
         {/* HISTÓRICO */}
         <div className={`rounded-[32px] p-6 mb-6 border ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'}`}>
           <h2 className="text-[10px] font-black uppercase text-purple-500 mb-6">Histórico de Atividades</h2>
@@ -250,15 +328,12 @@ export default function DetalhesOSPage() {
                 <p className="text-[10px] font-black uppercase opacity-40 mb-1">
                   {new Date(at.created_at).toLocaleDateString()} às {new Date(at.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </p>
-                <p className="text-xs font-bold text-blue-400 mb-1">{at.tecnicos_responsaveis || at.usuario_nome}</p>
+                <p className="text-xs font-bold text-blue-400 mb-1">{at.usuario_nome}</p>
                 <p className="text-xs opacity-70 leading-relaxed">{at.descricao}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* BOTAO MATERIAIS */}
-        <button onClick={() => router.push(`/ordens/${id_os}/material`)} className="w-full py-5 rounded-[32px] border-2 border-dashed border-blue-500/30 text-blue-500 text-[10px] font-black uppercase tracking-widest">+ Peças e Materiais</button>
 
       </main>
 
