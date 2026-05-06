@@ -6,8 +6,8 @@ import { supabase } from '../../../lib/supabase'
 import { 
   ChevronLeft, ClipboardList, User, Monitor, 
   FileText, Camera, Users, LayoutGrid, 
-  CircleDollarSign, Settings, CheckCircle2, XCircle, Loader2, FolderOpen,
-  PlayCircle, PauseCircle, Pencil, Ruler, Download
+  CircleDollarSign, Settings, CheckCircle2, XCircle, Loader2,
+  PlayCircle, PauseCircle, Pencil, Download, X
 } from 'lucide-react'
 
 import jsPDF from 'jspdf'
@@ -39,11 +39,6 @@ type Material = {
   tipo: string
   descricao: string
   quantidade: string
-  espessura?: string
-  diametro?: string
-  diametro_interno?: string
-  comprimento?: string
-  largura?: string
 }
 
 type Atualizacao = {
@@ -67,7 +62,6 @@ export default function DetalhesOSPage() {
   const [materiais, setMateriais] = useState<Material[]>([])
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
-  const [perfilUsuario, setPerfilUsuario] = useState<string | null>(null)
   
   const [tecnicoAtuante, setTecnicoAtuante] = useState('')
   const [atividadeExecutada, setAtividadeExecutada] = useState('')
@@ -76,6 +70,7 @@ export default function DetalhesOSPage() {
   const [motivoParada, setMotivoParada] = useState('')
   const [mostrarCampoParada, setMostrarCampoParada] = useState(false)
   const [gerandoPDF, setGerandoPDF] = useState(false)
+  const [fotoExpandida, setFotoExpandida] = useState<string | null>(null)
 
   const [modalEdicao, setModalEdicao] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -120,22 +115,31 @@ export default function DetalhesOSPage() {
   async function gerarPDF() {
     if (!printRef.current) return
     setGerandoPDF(true)
+    
+    // Aguarda um momento para garantir que as imagens carregaram com crossOrigin
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
       const element = printRef.current
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
-        backgroundColor: tema === 'clean' ? '#f8fafc' : '#07111f',
+        allowTaint: true,
+        logging: false,
+        backgroundColor: clean ? '#f8fafc' : '#07111f',
         ignoreElements: (el) => el.classList.contains('no-print')
       })
+
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
       pdf.save(`OS_${ordem?.numero_os || id_os}.pdf`)
     } catch (error) {
-      alert("Erro ao gerar PDF")
+      console.error(error)
+      alert("Erro ao gerar PDF. Verifique se as imagens carregaram corretamente.")
     } finally {
       setGerandoPDF(false)
     }
@@ -219,7 +223,7 @@ export default function DetalhesOSPage() {
             </div>
           </div>
 
-          {/* CONTROLE DE OPERAÇÃO - NO-PRINT */}
+          {/* CONTROLE DE OPERAÇÃO */}
           {!encerrada && (
             <section className={`no-print mb-6 p-4 rounded-3xl border ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-800'}`}>
               <div className="flex gap-2">
@@ -231,17 +235,21 @@ export default function DetalhesOSPage() {
                 </button>
               </div>
 
-              {mostrarCampoAndamento && (
+              {(mostrarCampoAndamento || mostrarCampoParada) && (
                 <div className="mt-4 space-y-3">
-                  <input value={tecnicoAtuante} onChange={e => setTecnicoAtuante(e.target.value)} placeholder="Técnico" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
-                  <textarea value={atividadeExecutada} onChange={e => setAtividadeExecutada(e.target.value)} placeholder="Atividade" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
-                  <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px]">Confirmar Início</button>
-                </div>
-              )}
-              {mostrarCampoParada && (
-                <div className="mt-4 space-y-3">
-                  <textarea value={motivoParada} onChange={e => setMotivoParada(e.target.value)} placeholder="Motivo da parada" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
-                  <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 text-white rounded-xl font-black uppercase text-[10px]">Confirmar Parada</button>
+                  {mostrarCampoAndamento && (
+                    <>
+                      <input value={tecnicoAtuante} onChange={e => setTecnicoAtuante(e.target.value)} placeholder="Técnico" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
+                      <textarea value={atividadeExecutada} onChange={e => setAtividadeExecutada(e.target.value)} placeholder="Atividade" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
+                      <button onClick={() => atualizarStatusExecucao('Em andamento')} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px]">Confirmar Início</button>
+                    </>
+                  )}
+                  {mostrarCampoParada && (
+                    <>
+                      <textarea value={motivoParada} onChange={e => setMotivoParada(e.target.value)} placeholder="Motivo da parada" className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'}`} />
+                      <button onClick={() => atualizarStatusExecucao('Parado')} className="w-full py-3 bg-amber-500 text-white rounded-xl font-black uppercase text-[10px]">Confirmar Parada</button>
+                    </>
+                  )}
                 </div>
               )}
             </section>
@@ -262,10 +270,21 @@ export default function DetalhesOSPage() {
           <div className={`rounded-3xl p-6 mb-5 border ${clean ? 'bg-white' : 'bg-[#0d1726] border-slate-800'}`}>
             <h2 className="text-[10px] font-black uppercase mb-4 text-blue-500">Fotos de Campo</h2>
             <div className="no-print mb-4">
-               <label className="w-full py-3 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase cursor-pointer"><Camera size={14}/> Tirar Foto<input type="file" hidden capture="environment" onChange={handleAddFoto} /></label>
+               <label className="w-full py-3 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase cursor-pointer">
+                 <Camera size={14}/> Tirar Foto
+                 <input type="file" hidden capture="environment" onChange={handleAddFoto} />
+               </label>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {fotos.map(f => <img key={f.id} src={f.url} className="w-full h-32 object-cover rounded-xl" />)}
+              {fotos.map(f => (
+                <img 
+                  key={f.id} 
+                  src={f.url} 
+                  crossOrigin="anonymous" // OBRIGATÓRIO PARA O PDF FUNCIONAR COM SUPABASE
+                  onClick={() => setFotoExpandida(f.url)} // ABRE A FOTO
+                  className="w-full h-32 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
+                />
+              ))}
             </div>
           </div>
 
@@ -278,7 +297,6 @@ export default function DetalhesOSPage() {
                 {materiais.map(m => (
                   <div key={m.id} className="mb-3 pb-3 border-b border-white/5 last:border-0">
                     <p className="text-xs font-bold uppercase">{m.descricao} <span className="text-blue-500 ml-1">x{m.quantidade}</span></p>
-                    <p className="text-[9px] opacity-40 uppercase">{m.tipo?.replace('_', ' ')}</p>
                   </div>
                 ))}
               </div>
@@ -298,7 +316,7 @@ export default function DetalhesOSPage() {
             </div>
           </div>
 
-          {/* AÇÕES - NO-PRINT */}
+          {/* AÇÕES */}
           {!encerrada && (
             <div className="no-print grid grid-cols-2 gap-4 mb-10">
               <button onClick={() => alterarStatus('Cancelado')} className="p-4 rounded-3xl bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-2"><XCircle size={20}/> Cancelar</button>
@@ -308,7 +326,15 @@ export default function DetalhesOSPage() {
         </main>
       </div>
 
-      {/* MENU - NO-PRINT (BOTÃO CONFIGURAÇÃO ADICIONADO) */}
+      {/* MODAL VISUALIZAÇÃO DE FOTO (ADICIONADO) */}
+      {fotoExpandida && (
+        <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4" onClick={() => setFotoExpandida(null)}>
+          <button className="absolute top-6 right-6 text-white bg-white/10 p-2 rounded-full"><X size={32}/></button>
+          <img src={fotoExpandida} className="max-w-full max-h-full rounded-lg shadow-2xl" />
+        </div>
+      )}
+
+      {/* MENU INFERIOR */}
       <nav className={`no-print fixed bottom-0 left-0 right-0 border-t py-4 px-6 z-50 ${clean ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#07111f] border-slate-800 text-white'}`}>
         <div className="max-w-md mx-auto flex justify-between items-center">
             <MenuNav titulo="Home" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
