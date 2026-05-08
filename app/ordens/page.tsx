@@ -251,7 +251,7 @@ function InfoLinha({ titulo, texto, clean }: any) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-[10px] uppercase font-bold opacity-40">{titulo}</span>
-      <span className={`text-xs font-semibold truncate max-w-[150px] ${clean ? 'text-slate-600' : 'text-slate-300'}`}>
+      <span className={`text-xs font-semibold truncate max-w-37.5 ${clean ? 'text-slate-600' : 'text-slate-300'}`}>
         {texto}
       </span>
     </div>
