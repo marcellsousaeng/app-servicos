@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 // Configuração de Metadados para PWA
 export const metadata: Metadata = {
-  title: "Divisa Tornearia - Sistema OS",
+  title: "R&B Torneadora - Sistema OS",
   description: "Sistema de Gestão de Ordens de Serviço",
   manifest: "/manifest.json", // Vincula o arquivo que você criou na pasta public
   appleWebApp: {
