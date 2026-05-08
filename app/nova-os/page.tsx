@@ -4,19 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import {
-  User,
-  Cpu,
-  FileText,
-  Camera,
-  Save,
-  XCircle,
-  LayoutDashboard,
-  ClipboardList,
-  DollarSign,
-  Settings,
-  FolderOpen,
-  Image as ImageIcon,
-  Trash2
+  User, Cpu, FileText, Camera, Save, XCircle, 
+  LayoutGrid, ClipboardList, CircleDollarSign, Settings, Trash2,
+  FolderOpen, ImageIcon, LayoutDashboard // Adicionados ícones faltantes
 } from 'lucide-react'
 
 // Interfaces de Tipagem
@@ -26,14 +16,6 @@ interface CampoProps {
   placeholder: string;
   value: string;
   onChange: (val: string) => void;
-  tema: 'dark' | 'clean';
-}
-
-interface MenuIconProps {
-  label: string;
-  icone: React.ReactNode;
-  onClick: () => void;
-  ativo: boolean;
   tema: 'dark' | 'clean';
 }
 
@@ -47,6 +29,9 @@ export default function NovaOSPage() {
   const [fotos, setFotos] = useState<File[]>([])
   const [salvando, setSalvando] = useState(false)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
+
+  // Define a variável clean baseada no tema para o menu inferior
+  const clean = tema === 'clean'
 
   useEffect(() => {
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
@@ -223,12 +208,10 @@ export default function NovaOSPage() {
               </div>
             </div>
 
-            {/* SEÇÃO DE FOTOS - 02 OPÇÕES */}
             <div className="space-y-3">
               <p className="text-[10px] font-black uppercase text-slate-500 px-2 tracking-widest">Anexar Registros Visuais</p>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* BOTÃO CÂMERA */}
                 <label className={`flex flex-col items-center justify-center p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
                   }`}>
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-blue-600 text-white shadow-lg mb-2">
@@ -238,7 +221,6 @@ export default function NovaOSPage() {
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
                 </label>
 
-                {/* BOTÃO FICHEIRO */}
                 <label className={`flex flex-col items-center justify-center p-4 rounded-3xl border border-dashed cursor-pointer transition-all active:scale-95 ${tema === 'dark' ? 'bg-[#111c2e]/50 border-slate-600' : 'bg-slate-50 border-slate-300'
                   }`}>
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-slate-700 text-white shadow-lg mb-2">
@@ -249,7 +231,6 @@ export default function NovaOSPage() {
                 </label>
               </div>
 
-              {/* CONTADOR E LISTA DE FOTOS SELECIONADAS */}
               {fotos.length > 0 && (
                 <div className={`p-3 rounded-2xl ${tema === 'dark' ? 'bg-slate-800/30' : 'bg-slate-100'}`}>
                   <div className="flex items-center gap-2 mb-2 px-1">
@@ -294,7 +275,7 @@ export default function NovaOSPage() {
         </section>
       </main>
 
-      {/* MENU INFERIOR */}
+      {/* MENU INFERIOR AJUSTADO */}
       <nav className={`fixed bottom-0 left-0 right-0 border-t py-2 z-50 ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
         }`}>
         <div className="max-w-md mx-auto grid grid-cols-5 px-2">
@@ -334,6 +315,7 @@ export default function NovaOSPage() {
   )
 }
 
+// Componentes Auxiliares
 function CampoModerno({ icone, label, placeholder, value, onChange, tema }: CampoProps) {
   return (
     <div className={`rounded-3xl px-4 py-3 border transition-all focus-within:border-blue-500 ${tema === 'dark' ? 'bg-[#111c2e] border-slate-700/50' : 'bg-slate-50 border-slate-200'
@@ -352,15 +334,18 @@ function CampoModerno({ icone, label, placeholder, value, onChange, tema }: Camp
   )
 }
 
-function MenuIcon({ label, icone, onClick, ativo, tema }: MenuIconProps) {
+function MenuItem({ titulo, Icone, ativo, clean, onClick }: any) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 transition-all">
-      <div className={`p-2 rounded-xl ${ativo ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-500'}`}>
-        {icone}
-      </div>
-      <span className={`text-[9px] font-black uppercase tracking-tighter ${ativo ? 'text-blue-500' : 'text-slate-500'}`}>
-        {label}
-      </span>
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 transition-all active:scale-95 ${
+        ativo 
+          ? 'text-blue-500' 
+          : clean ? 'text-slate-400' : 'text-slate-500'
+      }`}
+    >
+      <Icone size={20} strokeWidth={ativo ? 2.5 : 2} />
+      <span className="text-[10px] font-bold uppercase tracking-wider">{titulo}</span>
     </button>
   )
 }
