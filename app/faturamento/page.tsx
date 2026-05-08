@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { 
-  ArrowLeft, Search, XCircle, LayoutGrid, 
-  ClipboardList, CircleDollarSign, Settings, Hash, 
-  Receipt, Store, DollarSign
+import {
+  ArrowLeft, Search, XCircle, LayoutGrid,
+  ClipboardList, CircleDollarSign, Settings, Hash,
+  Receipt, Store, DollarSign, FileText
 } from 'lucide-react'
 
 export default function FaturamentoPage() {
@@ -17,7 +17,7 @@ export default function FaturamentoPage() {
   const [busca, setBusca] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [tema, setTema] = useState<'dark' | 'clean'>('dark')
-  
+
   // Estados do Modal de Gerenciamento
   const [modalAberto, setModalAberto] = useState(false)
   const [osSelecionada, setOsSelecionada] = useState<any>(null)
@@ -57,7 +57,7 @@ export default function FaturamentoPage() {
   const clean = tema === 'clean'
 
   const prepararFaturamento = (e: React.MouseEvent, ordem: any) => {
-    e.stopPropagation() 
+    e.stopPropagation()
     setOsSelecionada(ordem)
     setUnidade(ordem.unidade_faturamento || 'TORNEARIA DIVISA')
     setNumPedido(ordem.numero_pedido_faturamento || '')
@@ -104,22 +104,22 @@ export default function FaturamentoPage() {
     }
   }
 
-  const ordensFiltradas = ordens.filter((o) => 
+  const ordensFiltradas = ordens.filter((o) =>
     `${o.cliente} ${o.maquina} ${o.numero_os}`.toLowerCase().includes(busca.toLowerCase())
   )
 
   return (
     <div className={`min-h-screen pb-32 transition-colors duration-300 ${clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'}`}>
       <main className="max-w-md mx-auto px-5 pt-6">
-        
+
         <header className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/dashboard')} className={`p-2.5 rounded-xl border ${clean ? 'bg-white' : 'bg-[#0d1a2d] border-slate-800'}`}>
               <ArrowLeft size={20} />
             </button>
             <div>
-               <h1 className="text-xl font-black uppercase tracking-tight">Faturamento</h1>
-               <p className="text-[10px] font-bold opacity-40 uppercase">Controle de Saída</p>
+              <h1 className="text-xl font-black uppercase tracking-tight">Faturamento</h1>
+              <p className="text-[10px] font-bold opacity-40 uppercase">Controle de Saída</p>
             </div>
           </div>
         </header>
@@ -127,8 +127,8 @@ export default function FaturamentoPage() {
         {/* BUSCA */}
         <div className={`flex items-center gap-3 p-4 rounded-2xl border mb-6 ${clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-800'}`}>
           <Search size={18} className="text-blue-500" />
-          <input 
-            placeholder="Buscar por cliente ou OS..." 
+          <input
+            placeholder="Buscar por cliente ou OS..."
             className="bg-transparent outline-none text-sm w-full font-medium"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -140,20 +140,18 @@ export default function FaturamentoPage() {
           {carregando ? (
             <div className="py-20 text-center opacity-50 italic">Carregando ordens...</div>
           ) : ordensFiltradas.map((ordem) => (
-            <div 
-              key={ordem.id} 
+            <div
+              key={ordem.id}
               // CORREÇÃO DA ROTA: Agora aponta para /ordens/[id]
               onClick={() => router.push(`/ordens/${ordem.id}`)}
-              className={`rounded-[2rem] border p-6 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
-                ordem.status_faturamento === 'Faturado' 
-                ? 'border-emerald-500/30 bg-emerald-500/5' 
-                : clean ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0b1628] border-slate-800'
-              }`}
+              className={`rounded-[2rem] border p-6 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${ordem.status_faturamento === 'Faturado'
+                  ? 'border-emerald-500/30 bg-emerald-500/5'
+                  : clean ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0b1628] border-slate-800'
+                }`}
             >
               <div className="flex justify-between mb-4">
-                <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl uppercase ${
-                  ordem.status_faturamento === 'Faturado' ? 'bg-emerald-500 text-white' : 'bg-slate-500/20 text-slate-400'
-                }`}>
+                <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl uppercase ${ordem.status_faturamento === 'Faturado' ? 'bg-emerald-500 text-white' : 'bg-slate-500/20 text-slate-400'
+                  }`}>
                   {ordem.status_faturamento === 'Faturado' ? 'Faturado' : 'Pendente'}
                 </span>
                 <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">OS #{ordem.numero_os}</span>
@@ -191,7 +189,7 @@ export default function FaturamentoPage() {
                 </div>
               )}
 
-              <button 
+              <button
                 onClick={(e) => prepararFaturamento(e, ordem)}
                 className="w-full py-4 rounded-xl bg-blue-600/10 text-blue-500 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95"
               >
@@ -205,7 +203,7 @@ export default function FaturamentoPage() {
       {/* MODAL DE GERENCIAMENTO */}
       {modalAberto && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setModalAberto(false)}>
-          <div 
+          <div
             onClick={e => e.stopPropagation()}
             className={`w-full max-w-sm rounded-[2.5rem] p-8 max-h-[90vh] overflow-y-auto ${clean ? 'bg-white' : 'bg-[#0d1726]'}`}
           >
@@ -220,7 +218,7 @@ export default function FaturamentoPage() {
                 <label className="text-[9px] font-black uppercase opacity-40 ml-1">Unidade Faturadora</label>
                 <div className="grid grid-cols-2 gap-2 mt-1.5">
                   {['TORNEARIA DIVISA', 'DIVISA IMPLEMENTOS'].map(u => (
-                    <button 
+                    <button
                       key={u}
                       onClick={() => setUnidade(u)}
                       className={`py-3 rounded-xl text-[9px] font-black border transition-all ${unidade === u ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-700 opacity-40'}`}
@@ -237,7 +235,7 @@ export default function FaturamentoPage() {
                   <label className="text-[9px] font-black uppercase opacity-40 ml-1">Status</label>
                   <div className="grid grid-cols-2 gap-2 mt-1.5">
                     {['Pendente', 'Faturado'].map(s => (
-                      <button 
+                      <button
                         key={s}
                         onClick={() => setStatusFaturamento(s)}
                         className={`py-3 rounded-xl text-[9px] font-black border transition-all ${statusFaturamento === s ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-700 opacity-40'}`}
@@ -254,7 +252,7 @@ export default function FaturamentoPage() {
               <InputField label="Nº OS do Sistema" icon={Hash} value={numSistema} onChange={setNumSistema} placeholder="0000" clean={clean} />
               <InputField label="Valor do Serviço (R$)" icon={DollarSign} value={valor} onChange={setValor} placeholder="0,00" clean={clean} />
 
-              <button 
+              <button
                 onClick={salvarFaturamento}
                 disabled={salvando}
                 className="w-full py-5 rounded-2xl font-black uppercase tracking-widest mt-4 bg-blue-600 text-white shadow-lg active:scale-95 transition-all"
@@ -266,13 +264,40 @@ export default function FaturamentoPage() {
         </div>
       )}
 
-      {/* NAVEGAÇÃO INFERIOR */}
-      <nav className={`fixed bottom-0 left-0 right-0 border-t py-3 z-50 ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'}`}>
-        <div className="max-w-md mx-auto grid grid-cols-4 px-4">
-          <MenuItem clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
-          <MenuItem clean={clean} titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
-          <MenuItem clean={clean} ativo titulo="Faturam." Icone={CircleDollarSign} onClick={() => {}} />
-          <MenuItem clean={clean} titulo="Config." Icone={Settings} onClick={() => router.push('/configuracao')} />
+      {/* MENU INFERIOR */}
+      <nav className={`fixed bottom-0 left-0 right-0 border-t py-2 z-50 ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
+        }`}>
+        <div className="max-w-md mx-auto grid grid-cols-5 px-2">
+          <MenuItem
+            titulo="Início"
+            Icone={LayoutGrid}
+            clean={clean}
+            onClick={() => router.push('/dashboard')}
+          />
+          <MenuItem
+            titulo="Ordens"
+            Icone={ClipboardList}
+            clean={clean}
+            onClick={() => router.push('/ordens')}
+          />
+          <MenuItem
+            titulo="Orçam."
+            Icone={FileText}
+            clean={clean}
+            onClick={() => router.push('/orcamento')}
+          />
+          <MenuItem
+            titulo="Faturam."
+            Icone={CircleDollarSign}
+            clean={clean}
+            onClick={() => router.push('/faturamento')}
+          />
+          <MenuItem
+            titulo="Config."
+            Icone={Settings}
+            clean={clean}
+            onClick={() => router.push('/configuracao')}
+          />
         </div>
       </nav>
     </div>
@@ -285,11 +310,11 @@ function InputField({ label, icon: Icon, value, onChange, placeholder, clean }: 
       <label className="text-[9px] font-black uppercase opacity-40 ml-1">{label}</label>
       <div className={`flex items-center gap-3 p-4 rounded-2xl border mt-1.5 ${clean ? 'bg-slate-50 border-slate-200' : 'bg-black/20 border-slate-800'}`}>
         <Icon size={18} className="text-blue-500" />
-        <input 
-          value={value} 
-          onChange={e => onChange(e.target.value)} 
-          placeholder={placeholder} 
-          className="bg-transparent outline-none w-full font-bold text-sm" 
+        <input
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="bg-transparent outline-none w-full font-bold text-sm"
         />
       </div>
     </div>
