@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { 
-  LogOut, Plus, ClipboardList, CircleDollarSign, Settings, 
+import {
+  LogOut, Plus, ClipboardList, CircleDollarSign, Settings,
   Play, Pause, CheckCircle2, XCircle,
   LayoutGrid, User, ArrowUpRight, Wifi, WifiOff,
-  Receipt 
+  Receipt, FileText
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -24,12 +24,12 @@ export default function DashboardPage() {
     setIsOnline(navigator.onLine)
     const temaSalvo = localStorage.getItem('tema-app') as 'dark' | 'clean' | null
     if (temaSalvo) setTema(temaSalvo)
-    
+
     carregarDashboard()
 
     const handleOnline = () => {
       setIsOnline(true)
-      sincronizarDadosOffline() 
+      sincronizarDadosOffline()
     }
     const handleOffline = () => setIsOnline(false)
 
@@ -80,7 +80,7 @@ export default function DashboardPage() {
 
     const lista = dadosOrdens || []
     setOrdens(lista)
-    
+
     setContadores({
       andamento: lista.filter(o => o.status === 'Em andamento').length,
       parado: lista.filter(o => o.status === 'Parado').length,
@@ -101,11 +101,10 @@ export default function DashboardPage() {
   }, [ordens, filtroStatus])
 
   return (
-    <div className={`min-h-screen pb-32 transition-colors duration-300 ${
-      clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'
-    }`}>
+    <div className={`min-h-screen pb-32 transition-colors duration-300 ${clean ? 'bg-slate-50 text-slate-900' : 'bg-[#07111f] text-white'
+      }`}>
       <main className="max-w-md mx-auto px-5 pt-6">
-        
+
         {/* HEADER */}
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -124,18 +123,16 @@ export default function DashboardPage() {
 
           <button
             onClick={() => { localStorage.removeItem('usuario'); router.push('/') }}
-            className={`p-3 rounded-xl border flex items-center gap-2 transition-all active:scale-95 ${
-              clean ? 'bg-white border-slate-200 text-rose-500' : 'bg-[#0d1a2d] border-rose-500/30 text-rose-400'
-            }`}
+            className={`p-3 rounded-xl border flex items-center gap-2 transition-all active:scale-95 ${clean ? 'bg-white border-slate-200 text-rose-500' : 'bg-[#0d1a2d] border-rose-500/30 text-rose-400'
+              }`}
           >
             <LogOut size={18} />
           </button>
         </div>
 
         {/* PERFIL E ATALHOS */}
-        <div className={`rounded-3xl p-6 mb-6 shadow-2xl border ${
-          clean ? 'bg-white border-slate-100' : 'bg-gradient-to-br from-[#111d31] to-[#0a1220] border-blue-500/20'
-        }`}>
+        <div className={`rounded-3xl p-6 mb-6 shadow-2xl border ${clean ? 'bg-white border-slate-100' : 'bg-gradient-to-br from-[#111d31] to-[#0a1220] border-blue-500/20'
+          }`}>
           <div className="flex items-center justify-between mb-8">
             <div className="min-w-0">
               <p className={`text-sm font-medium ${clean ? 'text-slate-500' : 'text-blue-300'}`}>Bem-vindo,</p>
@@ -164,14 +161,13 @@ export default function DashboardPage() {
         </div>
 
         {/* LISTAGEM RECENTE */}
-        <section className={`rounded-3xl border shadow-xl overflow-hidden ${
-          clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'
-        }`}>
+        <section className={`rounded-3xl border shadow-xl overflow-hidden ${clean ? 'bg-white border-slate-100' : 'bg-[#0d1726] border-slate-800'
+          }`}>
           <div className="p-5 flex items-center justify-between border-b border-white/5">
             <h2 className="font-black text-lg uppercase tracking-tight">
-              {filtroStatus === 'todas' ? 'Recentes' : 
-               filtroStatus === 'parado' ? 'OS Paradas' : 
-               filtroStatus === 'cancelado' ? 'OS Canceladas' : 'Resultado'}
+              {filtroStatus === 'todas' ? 'Recentes' :
+                filtroStatus === 'parado' ? 'OS Paradas' :
+                  filtroStatus === 'cancelado' ? 'OS Canceladas' : 'Resultado'}
             </h2>
             {filtroStatus !== 'todas' && (
               <button onClick={() => setFiltroStatus('todas')} className="text-[10px] font-black text-blue-500 uppercase bg-blue-500/10 px-2 py-1 rounded-lg">
@@ -192,38 +188,37 @@ export default function DashboardPage() {
               <div className="py-10 text-center text-slate-400 text-sm italic">Nenhum registro encontrado.</div>
             ) : (
               (filtroStatus === 'todas' ? ordensFiltradas.slice(0, 5) : ordensFiltradas).map((ordem) => {
-                
+
                 // --- LÓGICA DE FATURAMENTO COM 3 ESTADOS ---
                 const statusFat = ordem.status_faturamento; // Esperado: 'Faturado', 'Parcialmente Faturado' ou null/vazio
                 const temNumeros = !!(ordem.numero_pedido_faturamento || ordem.numero_os_faturamento);
-                
+
                 let fatLabel = "Pendente";
                 let fatStyles = "bg-slate-500/20 text-slate-400 border border-slate-500/30";
 
                 if (statusFat === 'Faturado') {
-                    fatLabel = "Faturado";
-                    fatStyles = "bg-emerald-500 text-white shadow-sm";
+                  fatLabel = "Faturado";
+                  fatStyles = "bg-emerald-500 text-white shadow-sm";
                 } else if (statusFat === 'Parcialmente Faturado' || statusFat === 'Parcial') {
-                    fatLabel = "Parcial";
-                    fatStyles = "bg-amber-500 text-white shadow-sm";
+                  fatLabel = "Parcial";
+                  fatStyles = "bg-amber-500 text-white shadow-sm";
                 } else if (temNumeros && !statusFat) {
-                    // Fallback para manter compatibilidade se o status_faturamento não foi preenchido
-                    fatLabel = "Faturado";
-                    fatStyles = "bg-emerald-500 text-white shadow-sm";
+                  // Fallback para manter compatibilidade se o status_faturamento não foi preenchido
+                  fatLabel = "Faturado";
+                  fatStyles = "bg-emerald-500 text-white shadow-sm";
                 }
 
                 return (
-                  <div 
-                    key={ordem.id} 
+                  <div
+                    key={ordem.id}
                     onClick={() => router.push(`/ordens/${ordem.id}`)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] hover:border-blue-500/50 ${
-                      clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'
-                    }`}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] hover:border-blue-500/50 ${clean ? 'bg-slate-50 border-slate-100' : 'bg-[#111c2e] border-slate-700/50'
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-black text-blue-500">#{ordem.numero_os ?? ordem.id}</span>
-                        
+
                         {/* INDICADOR DE FATURAMENTO PARA FINALIZADAS */}
                         {ordem.status === 'Finalizado' && (
                           <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${fatStyles}`}>
@@ -233,22 +228,21 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${
-                        ordem.status === 'Finalizado' 
-                          ? 'bg-emerald-500/10 text-emerald-500' 
-                          : (ordem.status === 'Cancelado' || ordem.cancelada)
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase ${ordem.status === 'Finalizado'
+                        ? 'bg-emerald-500/10 text-emerald-500'
+                        : (ordem.status === 'Cancelado' || ordem.cancelada)
                           ? 'bg-rose-500/10 text-rose-500'
                           : ordem.status === 'Parado'
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-blue-500/10 text-blue-500'
-                      }`}>
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-blue-500/10 text-blue-500'
+                        }`}>
                         {ordem.status}
                       </span>
                     </div>
 
                     <p className="text-sm font-bold truncate uppercase">{ordem.cliente}</p>
                     <p className="text-xs opacity-50 truncate uppercase mb-1">
-                      {ordem.maquina || 'MAQUINA NÃO INF.' }
+                      {ordem.maquina || 'MAQUINA NÃO INF.'}
                     </p>
 
                     {/* EXIBIÇÃO DOS DADOS DE FATURAMENTO SE EXISTIREM */}
@@ -285,14 +279,39 @@ export default function DashboardPage() {
       </main>
 
       {/* MENU INFERIOR */}
-      <nav className={`fixed bottom-0 left-0 right-0 border-t py-2 z-50 ${
-        clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
-      }`}>
-        <div className="max-w-md mx-auto grid grid-cols-4 px-4">
-          <MenuItem ativo titulo="Início" Icone={LayoutGrid} clean={clean} onClick={() => {}} />
-          <MenuItem titulo="Ordens" Icone={ClipboardList} clean={clean} onClick={() => router.push('/ordens')} />
-          <MenuItem titulo="Faturam." Icone={CircleDollarSign} clean={clean} onClick={() => router.push('/faturamento')} />
-          <MenuItem titulo="Config." Icone={Settings} clean={clean} onClick={() => router.push('/configuracao')} />
+      <nav className={`fixed bottom-0 left-0 right-0 border-t py-2 z-50 ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
+        }`}>
+        <div className="max-w-md mx-auto grid grid-cols-5 px-2">
+          <MenuItem
+            titulo="Início"
+            Icone={LayoutGrid}
+            clean={clean}
+            onClick={() => router.push('/dashboard')}
+          />
+          <MenuItem
+            titulo="Ordens"
+            Icone={ClipboardList}
+            clean={clean}
+            onClick={() => router.push('/ordens')}
+          />
+          <MenuItem
+            titulo="Orçam."
+            Icone={FileText}
+            clean={clean}
+            onClick={() => router.push('/orcamento')}
+          />
+          <MenuItem
+            titulo="Faturam."
+            Icone={CircleDollarSign}
+            clean={clean}
+            onClick={() => router.push('/faturamento')}
+          />
+          <MenuItem
+            titulo="Config."
+            Icone={Settings}
+            clean={clean}
+            onClick={() => router.push('/configuracao')}
+          />
         </div>
       </nav>
     </div>
@@ -301,9 +320,8 @@ export default function DashboardPage() {
 
 function Atalho({ titulo, Icone, onClick, destaque, clean }: any) {
   return (
-    <button onClick={onClick} className={`h-20 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-90 border ${
-      destaque ? 'bg-blue-600 border-blue-400 text-white' : clean ? 'bg-slate-50 border-slate-100 text-slate-600' : 'bg-[#121c2c] border-slate-700 text-slate-300'
-    }`}>
+    <button onClick={onClick} className={`h-20 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-90 border ${destaque ? 'bg-blue-600 border-blue-400 text-white' : clean ? 'bg-slate-50 border-slate-100 text-slate-600' : 'bg-[#121c2c] border-slate-700 text-slate-300'
+      }`}>
       <Icone size={22} strokeWidth={destaque ? 3 : 2} />
       <span className="text-[10px] font-bold uppercase tracking-tighter">{titulo}</span>
     </button>
@@ -318,9 +336,8 @@ function CardMini({ titulo, valor, Icone, cor, clean, onClick }: any) {
     rose: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
   }
   return (
-    <button onClick={onClick} className={`p-4 rounded-3xl border text-left transition-all active:scale-95 ${
-      clean ? 'bg-white border-slate-100 shadow-sm' : 'bg-[#0d1726] border-slate-800'
-    }`}>
+    <button onClick={onClick} className={`p-4 rounded-3xl border text-left transition-all active:scale-95 ${clean ? 'bg-white border-slate-100 shadow-sm' : 'bg-[#0d1726] border-slate-800'
+      }`}>
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 border ${cores[cor] || cores.blue}`}>
         <Icone size={16} strokeWidth={2.5} />
       </div>
@@ -332,9 +349,8 @@ function CardMini({ titulo, valor, Icone, cor, clean, onClick }: any) {
 
 function MenuItem({ titulo, Icone, ativo, clean, onClick }: any) {
   return (
-    <button onClick={onClick} className={`flex flex-col items-center justify-center py-2 transition-colors ${
-      ativo ? 'text-blue-500' : clean ? 'text-slate-400' : 'text-slate-500'
-    }`}>
+    <button onClick={onClick} className={`flex flex-col items-center justify-center py-2 transition-colors ${ativo ? 'text-blue-500' : clean ? 'text-slate-400' : 'text-slate-500'
+      }`}>
       <Icone size={22} strokeWidth={ativo ? 3 : 2} />
       <span className={`mt-1 text-[10px] font-bold uppercase tracking-tighter ${ativo ? 'opacity-100' : 'opacity-60'}`}>
         {titulo}
