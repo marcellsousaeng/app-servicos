@@ -12,30 +12,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-<<<<<<< HEAD
 // Pega o nome da empresa configurado na Vercel. Se não encontrar, usa "Sistema OS" como padrão.
-=======
-// Pega o nome da empresa da Vercel. Se não existir, usa um nome padrão.
->>>>>>> 0ce2ac6ff885aac2d0817d5745d69082cc283183
 const nomeEmpresa = process.env.NEXT_PUBLIC_NOME_EMPRESA || "Sistema OS";
 
 // Configuração de Metadados Dinâmicos
 export const metadata: Metadata = {
   title: `${nomeEmpresa} - Sistema OS`,
   description: "Sistema de Gestão de Ordens de Serviço",
-<<<<<<< HEAD
   manifest: "/manifest.json", 
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: nomeEmpresa, // Nome dinâmico para o atalho no iPhone
-=======
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: nomeEmpresa,
->>>>>>> 0ce2ac6ff885aac2d0817d5745d69082cc283183
   },
   formatDetection: {
     telephone: false,
