@@ -12,15 +12,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Configuração de Metadados para PWA
+// Pega o nome da empresa configurado na Vercel. Se não encontrar, usa "Sistema OS" como padrão.
+const nomeEmpresa = process.env.NEXT_PUBLIC_NOME_EMPRESA || "Sistema OS";
+
+// Configuração de Metadados Dinâmicos
 export const metadata: Metadata = {
-  title: "R&B Torneadora - Sistema OS",
+  title: `${nomeEmpresa} - Sistema OS`,
   description: "Sistema de Gestão de Ordens de Serviço",
-  manifest: "/manifest.json", // Vincula o arquivo que você criou na pasta public
+  manifest: "/manifest.json", 
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Divisa OS",
+    title: nomeEmpresa, // Nome dinâmico para o atalho no iPhone
   },
   formatDetection: {
     telephone: false,
