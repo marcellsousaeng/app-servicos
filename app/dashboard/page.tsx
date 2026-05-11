@@ -281,7 +281,7 @@ export default function DashboardPage() {
       {/* MENU INFERIOR */}
       <nav className={`fixed bottom-0 left-0 right-0 border-t z-50 px-2 pb-safe ${clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
         }`}>
-        <div className="max-w-md mx-auto grid grid-cols-5 px-2">
+        <div className="w-full max-w-md mx-auto grid grid-cols-4 px-0">
           <MenuItem
             titulo="Início"
             Icone={LayoutGrid}
