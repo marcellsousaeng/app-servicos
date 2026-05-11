@@ -6,8 +6,10 @@ import { supabase } from '../../lib/supabase'
 import {
   Plus, User, FileText, Phone,
   X, Loader2, Camera, Image as ImageIcon, Hash, Edit3, Save, CircleDollarSign, Trash2,
-  LayoutGrid, ClipboardList, Settings
+  LayoutGrid, ClipboardList, Settings, Printer
 } from 'lucide-react'
+// Importamos o template que você criou
+import { templateHTMLDivisa } from './componente-pdf'
 
 export default function OrcamentoPage() {
   const router = useRouter()
@@ -41,9 +43,50 @@ export default function OrcamentoPage() {
 
   const clean = tema === 'clean'
 
+  // FUNÇÃO PARA GERAR O PDF/IMPRESSÃO
+  const gerarPDF = (orc: any) => {
+    // Formatamos os dados para o template
+    const dadosParaImpressao = {
+      cliente: orc.cliente,
+      documento: orc.documento,
+      telefone: orc.telefone,
+      solicitante: orc.solicitante,
+      numero: orc.id.toString().slice(-4),
+      descricao_servico: orc.descricao_servico,
+      quantidade: orc.quantidade,
+      valor_unitario: orc.valor_unitario?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      valor_total: orc.valor_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      desconto: orc.desconto?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      observacao: orc.observacao,
+      data_emissao: new Date(orc.created_at).toLocaleDateString('pt-BR')
+    }
+
+    const conteudo = templateHTMLDivisa(dadosParaImpressao)
+    const janelaImpressao = window.open('', '_blank')
+    
+    if (janelaImpressao) {
+      janelaImpressao.document.write(`
+        <html>
+          <head>
+            <title>Orçamento - ${orc.cliente}</title>
+            <style>
+              @media print {
+                body { margin: 0; }
+                @page { size: A4; margin: 10mm; }
+              }
+            </style>
+          </head>
+          <body onload="window.print(); window.close();">
+            ${conteudo}
+          </body>
+        </html>
+      `)
+      janelaImpressao.document.close()
+    }
+  }
+
   async function carregarOrcamentos() {
     setCarregando(true)
-    // Usando 'orcamentos' (sem ç) para evitar o erro de sintaxe do banco
     const { data } = await supabase.from('orcamentos').select('*').order('created_at', { ascending: false })
     if (data) setOrcamentos(data)
     setCarregando(false)
@@ -166,6 +209,14 @@ export default function OrcamentoPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* BOTÃO DE IMPRIMIR ADICIONADO AQUI */}
+                  <button 
+                    onClick={() => gerarPDF(orc)} 
+                    className={`p-2 rounded-lg active:scale-90 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20`}
+                  >
+                    <Printer size={16} />
+                  </button>
+
                   <button 
                     onClick={() => abrirEdicao(orc)} 
                     className={`p-2 rounded-lg active:scale-90 ${
@@ -186,7 +237,7 @@ export default function OrcamentoPage() {
 
       {/* MODAL */}
       {modalAberto && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-100 flex items-end justify-center">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end justify-center">
           <div className={`w-full max-w-md rounded-t-[40px] p-6 max-h-[92vh] overflow-y-auto border-t shadow-2xl ${
             clean ? 'bg-white border-slate-200' : 'bg-[#0d1726] border-slate-700'
           }`}>
