@@ -24,7 +24,6 @@ export default function FaturamentoPage() {
   const [unidade, setUnidade] = useState('')
   const [numPedido, setNumPedido] = useState('')
   const [numSistema, setNumSistema] = useState('')
-  const [valor, setValor] = useState('')
   const [statusFaturamento, setStatusFaturamento] = useState('Pendente')
   const [salvando, setSalvando] = useState(false)
 
@@ -62,7 +61,6 @@ export default function FaturamentoPage() {
     setUnidade(ordem.unidade_faturamento || 'TORNEARIA DIVISA')
     setNumPedido(ordem.numero_pedido_faturamento || '')
     setNumSistema(ordem.numero_os_faturamento || '')
-    setValor(ordem.valor_faturamento || '')
     setStatusFaturamento(ordem.status_faturamento === 'Faturado' ? 'Faturado' : 'Pendente')
     setModalAberto(true)
   }
@@ -77,7 +75,6 @@ export default function FaturamentoPage() {
         numero_pedido_faturamento: numPedido,
         numero_os_faturamento: numSistema,
         unidade_faturamento: unidade,
-        valor_faturamento: valor ? parseFloat(valor.toString().replace(',', '.')) : 0,
         status_faturamento: statusFaturamento,
         faturado: statusFaturamento === 'Faturado'
       }
@@ -160,7 +157,7 @@ export default function FaturamentoPage() {
               <h3 className="font-black text-base uppercase mb-1 truncate">{ordem.cliente}</h3>
               <p className="text-xs font-bold opacity-50 mb-5 truncate uppercase">{ordem.maquina}</p>
 
-              {(ordem.numero_pedido_faturamento || ordem.numero_os_faturamento || (ordem.valor_faturamento > 0)) && (
+              {(ordem.numero_pedido_faturamento || ordem.numero_os_faturamento ) && (
                 <div className={`mb-5 p-4 rounded-2xl border flex flex-col gap-3 ${clean ? 'bg-slate-50 border-slate-100' : 'bg-white/5 border-white/10'}`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -169,12 +166,7 @@ export default function FaturamentoPage() {
                         {ordem.unidade_faturamento || '---'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-emerald-500">
-                      <DollarSign size={14} />
-                      <span className="text-xs font-black">
-                        {Number(ordem.valor_faturamento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
+
                   </div>
                   <div className="flex gap-4 border-t border-white/5 pt-2">
                     <div className="flex flex-col">
@@ -250,7 +242,6 @@ export default function FaturamentoPage() {
               {/* Campos de Input */}
               <InputField label="Nº Pedido de Venda" icon={Receipt} value={numPedido} onChange={setNumPedido} placeholder="00000" clean={clean} />
               <InputField label="Nº OS do Sistema" icon={Hash} value={numSistema} onChange={setNumSistema} placeholder="0000" clean={clean} />
-              <InputField label="Valor do Serviço (R$)" icon={DollarSign} value={valor} onChange={setValor} placeholder="0,00" clean={clean} />
 
               <button
                 onClick={salvarFaturamento}
