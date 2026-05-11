@@ -385,7 +385,6 @@ export default function DetalhesOSPage() {
         <div className="max-w-md mx-auto grid grid-cols-5 px-2">
           <MenuNav clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
           <MenuNav clean={clean} ativo titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
-          <MenuNav clean={clean} titulo="Orçam." Icone={FileText} onClick={() => router.push('/orcamento')} />
           <MenuNav clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
           <MenuNav clean={clean} titulo="Config." Icone={Settings} onClick={() => router.push('/configuracao')} />
         </div>

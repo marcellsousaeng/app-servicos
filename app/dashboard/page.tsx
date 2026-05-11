@@ -144,7 +144,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-6 gap-3">
             <Atalho clean={clean} destaque titulo="Nova OS" Icone={Plus} onClick={() => router.push('/nova-os')} />
             <Atalho clean={clean} titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
             <Atalho clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
@@ -292,13 +292,7 @@ export default function DashboardPage() {
             titulo="Ordens"
             Icone={ClipboardList}
             clean={clean}
-            onClick={() => router.push('/ordens')}
-          />
-          <MenuItem
-            titulo="Orçam."
-            Icone={FileText}
-            clean={clean}
-            onClick={() => router.push('/orcamento')}
+            onClick={() => router.push('/ordens')}    
           />
           <MenuItem
             titulo="Faturam."

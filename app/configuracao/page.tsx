@@ -142,7 +142,6 @@ export default function ConfiguracaoPage() {
         <div className="max-w-md mx-auto grid grid-cols-5 px-2">
           <MenuItem clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
           <MenuItem clean={clean} titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
-          <MenuItem clean={clean} titulo="Orçam." Icone={FileText} onClick={() => router.push('/orcamento')} />
           <MenuItem clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
           <MenuItem clean={clean} ativo titulo="Config." Icone={Settings} onClick={() => {}} />
         </div>

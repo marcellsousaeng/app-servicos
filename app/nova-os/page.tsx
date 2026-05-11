@@ -292,12 +292,6 @@ export default function NovaOSPage() {
             onClick={() => router.push('/ordens')}
           />
           <MenuItem
-            titulo="Orçam."
-            Icone={FileText}
-            clean={clean}
-            onClick={() => router.push('/orcamento')}
-          />
-          <MenuItem
             titulo="Faturam."
             Icone={CircleDollarSign}
             clean={clean}

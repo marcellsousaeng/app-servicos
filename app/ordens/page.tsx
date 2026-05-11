@@ -220,7 +220,6 @@ export default function OrdensPage() {
         <div className="max-w-md mx-auto grid grid-cols-5 px-2">
           <MenuItem clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
           <MenuItem clean={clean} ativo titulo="Ordens" Icone={ClipboardList} onClick={() => {}} />
-          <MenuItem clean={clean} titulo="Orçam." Icone={FileText} onClick={() => router.push('/orcamento')} />
           <MenuItem clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
           <MenuItem clean={clean} titulo="Config." Icone={Settings} onClick={() => router.push('/configuracao')} />
         </div>
