@@ -398,6 +398,7 @@ export default function DetalhesOSPage() {
                 <h2 className="text-lg font-black uppercase mb-6 italic text-blue-500">Editar OS</h2>
                 <div className="space-y-4">
                     <input value={editForm.cliente} onChange={e => setEditForm({...editForm, cliente: e.target.value})} className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Cliente" />
+                    <input value={editForm.solicitante} onChange={e => setEditForm({...editForm, solicitante: e.target.value})} className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Solicitante" />
                     <input value={editForm.maquina} onChange={e => setEditForm({...editForm, maquina: e.target.value})} className={`w-full p-3 rounded-xl border ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Máquina" />
                     <textarea value={editForm.descricao} onChange={e => setEditForm({...editForm, descricao: e.target.value})} className={`w-full p-3 rounded-xl border min-h-25 ${clean ? 'bg-slate-50' : 'bg-slate-900 border-slate-700'}`} placeholder="Descrição" />
                     <button onClick={salvarEdicaoOS} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-lg shadow-blue-600/20">{salvandoEdicao ? 'Salvando...' : 'Salvar'}</button>
