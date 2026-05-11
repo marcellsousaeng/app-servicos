@@ -382,7 +382,7 @@ export default function DetalhesOSPage() {
       <nav className={`no-print fixed bottom-0 left-0 right-0 border-t py-2 z-50 ${
         clean ? 'bg-white border-slate-200' : 'bg-[#07111f] border-slate-800'
       }`}>
-        <div className="max-w-md mx-auto grid grid-cols-5 px-2">
+        <div className="max-w-md mx-auto grid grid-cols-4 px-2">
           <MenuNav clean={clean} titulo="Início" Icone={LayoutGrid} onClick={() => router.push('/dashboard')} />
           <MenuNav clean={clean} ativo titulo="Ordens" Icone={ClipboardList} onClick={() => router.push('/ordens')} />
           <MenuNav clean={clean} titulo="Faturam." Icone={CircleDollarSign} onClick={() => router.push('/faturamento')} />
